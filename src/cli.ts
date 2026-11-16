@@ -161,7 +161,7 @@ const main = async (): Promise<void> => {
   const modelUsed = record.modelUsed ?? provider;
 
   if (values.json === true) {
-    process.stdout.write(`${JSON.stringify({ pr: `${ref.repo}#${ref.number}`, headSha: detail.headSha, modelUsed, rulesUsed: record.rulesUsed, learnedCategories: record.learnedCategories, review }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ pr: `${ref.repo}#${ref.number}`, headSha: detail.headSha, modelUsed, rulesUsed: record.rulesUsed, testsAttached: record.testsAttached, learnedCategories: record.learnedCategories, review }, null, 2)}\n`);
   } else {
     process.stdout.write(`${formatReview({ detail, review, modelUsed, truncated: diff.truncated })}\n`);
   }

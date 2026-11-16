@@ -58,6 +58,8 @@ export interface ReviewRecord {
   truncated?: boolean;
   // 이번 리뷰에 실린 규칙 문서와 학습 규약 카테고리 — 무엇이 리뷰를 바꿨는지 대시보드에서 본다.
   rulesUsed?: string[];
+  // 함께 실은 기존 테스트 파일 수.
+  testsAttached?: number;
   learnedCategories?: string[];
   published?: { at: string; url: string; reviewId: number };
 }
@@ -231,12 +233,8 @@ export class Store {
 
   log(level: ActivityEntry['level'], message: string): void {
     this.state.activity.push({ at: new Date().toISOString(), level, message });
-    const line = `[${level}] ${message}`;
-    if (level === 'error') {
-      console.error(line);
-    } else {
-      console.log(line);
-    }
+    // 표준 에러로 쓴다 — 단발 CLI 의 `--json` 결과(표준 출력)에 섞이면 JSON 으로 읽히지 않는다.
+    process.stderr.write(`[${level}] ${message}\n`);
   }
 
   addReview(

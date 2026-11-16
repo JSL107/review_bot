@@ -63,6 +63,8 @@ export interface PullRequestDetail {
   additions: number;
   deletions: number;
   changedFiles: string[];
+  // 파일별 바뀐 줄 수(추가 + 삭제). 기존 테스트를 실을 순서를 정한다.
+  changedLinesByFile: Record<string, number>;
 }
 
 export interface PullRequestDiff {

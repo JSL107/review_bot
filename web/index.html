@@ -644,6 +644,7 @@ const renderReview = (review) => {
       : review.findings.length ? `<button class="btn main" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>` : '';
     const tech = [
       review.modelUsed ? `<dt>리뷰한 AI</dt><dd>${esc(review.modelUsed)}</dd>` : '',
+      review.testsAttached ? `<dt>함께 읽은 기존 테스트</dt><dd>${Number(review.testsAttached)}개</dd>` : '',
       review.rulesUsed?.length ? `<dt>함께 읽은 저장소 규칙</dt><dd>${esc(review.rulesUsed.join(', '))}</dd>` : '',
       review.learnedCategories?.length ? `<dt>기억하고 있던 것</dt><dd>${esc(review.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', '))}</dd>` : '',
     ].join('');
