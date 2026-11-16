@@ -3,17 +3,13 @@ import { confirm, input, select } from '@inquirer/prompts';
 import { parseArgs, styleText } from 'node:util';
 
 import { formatReview } from './format.js';
-import {
-  createReview,
-  fetchConsistentSnapshot,
-  listCandidatePullRequests,
-} from './github.js';
-import { complete, ModelProvider } from './model.js';
+import { listCandidatePullRequests } from './github.js';
+import { ModelProvider } from './model.js';
 import { parsePrReference } from './pr-reference.js';
-import { buildReviewPrompt, CODE_REVIEWER_SYSTEM_PROMPT } from './prompt.js';
 import { DEFAULT_INLINE_MAX, planPublication } from './publish.js';
-import { parsePullRequestReview } from './review-parser.js';
-import { ReviewError } from './review.type.js';
+import { publishReview, runReview } from './review-runner.js';
+import { PullRequestReview, ReviewError } from './review.type.js';
+import { Store } from './store.js';
 
 const HELP = `pr-review — codex / claude CLI 로 GitHub PR 을 리뷰한다
 
@@ -148,25 +144,25 @@ const main = async (): Promise<void> => {
   const timeoutMs =
     (values.timeout === undefined ? 600 : parsePositiveInt(values.timeout, '--timeout')) * 1000;
 
-  log(`${ref.repo}#${ref.number} 조회 중…`);
-  const { detail, diff } = await fetchConsistentSnapshot(ref);
-
-  log(`${provider} 로 리뷰 중… (보통 1~5분)`);
-  const startedAt = Date.now();
-  const completion = await complete({
-    prompt: buildReviewPrompt({ detail, diff, instruction: values.instruction }),
-    systemPrompt: CODE_REVIEWER_SYSTEM_PROMPT,
-    options: { provider, model: values['model-name'], timeoutMs },
+  const store = new Store();
+  const { record, snapshot } = await runReview({
+    store,
+    ref,
+    trigger: 'cli',
+    provider,
+    modelName: values['model-name'],
+    timeoutMs,
+    instruction: values.instruction,
+    onProgress: log,
   });
-  const review = parsePullRequestReview(completion.text, (message) =>
-    log(`판정 보정: ${message}`),
-  );
-  log(`완료 (${Math.round((Date.now() - startedAt) / 1000)}초)`);
+  const { detail, diff } = snapshot;
+  const review = record.review as PullRequestReview;
+  const modelUsed = record.modelUsed ?? provider;
 
   if (values.json === true) {
-    process.stdout.write(`${JSON.stringify({ pr: `${ref.repo}#${ref.number}`, headSha: detail.headSha, modelUsed: completion.modelUsed, review }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ pr: `${ref.repo}#${ref.number}`, headSha: detail.headSha, modelUsed, rulesUsed: record.rulesUsed, learnedCategories: record.learnedCategories, review }, null, 2)}\n`);
   } else {
-    process.stdout.write(`${formatReview({ detail, review, modelUsed: completion.modelUsed, truncated: diff.truncated })}\n`);
+    process.stdout.write(`${formatReview({ detail, review, modelUsed, truncated: diff.truncated })}\n`);
   }
 
   if (!publish) {
@@ -174,8 +170,7 @@ const main = async (): Promise<void> => {
   }
 
   const plan = planPublication({ detail, diff, review, inlineMax });
-  const planLine = `게시 예정: 인라인 ${plan.inlineCount}건 · 본문 목록 ${plan.bodyCount}건${plan.droppedCount > 0 ? ` · 상한 밖 ${plan.droppedCount}건 제외` : ''}`;
-  log(planLine);
+  log(`게시 예정: 인라인 ${plan.inlineCount}건 · 본문 목록 ${plan.bodyCount}건${plan.droppedCount > 0 ? ` · 상한 밖 ${plan.droppedCount}건 제외` : ''}`);
   if (values.yes !== true) {
     if (!interactive) {
       log('비대화형 실행이라 게시하지 않았습니다. 게시하려면 --yes 를 붙이세요.');
@@ -186,24 +181,12 @@ const main = async (): Promise<void> => {
       default: false,
     });
     if (!ok) {
-      log('게시하지 않았습니다.');
+      log('게시하지 않았습니다. 나중에 대시보드(pnpm dev)에서 게시할 수 있습니다.');
       return;
     }
   }
-
-  try {
-    const url = await createReview(ref, plan.payload);
-    log(`게시 완료: ${url}`);
-  } catch (error: unknown) {
-    if (plan.inlineCount === 0) {
-      throw error;
-    }
-    // 인라인 좌표 하나라도 GitHub 이 거부하면 리뷰 전체가 실패한다(422). 전부 본문 목록으로 다시 게시한다.
-    log(`인라인 게시 실패, 본문 목록으로 다시 게시: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
-    const fallback = planPublication({ detail, diff, review, inlineMax, inline: false });
-    const url = await createReview(ref, fallback.payload);
-    log(`게시 완료: ${url}`);
-  }
+  await publishReview({ store, record, snapshot, inlineMax, onProgress: log });
+  log(`게시 완료: ${record.published?.url ?? ''}`);
 };
 
 main().catch((error: unknown) => {

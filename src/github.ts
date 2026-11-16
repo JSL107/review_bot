@@ -197,11 +197,16 @@ export interface CreateReviewPayload {
   comments: ReviewCommentPayload[];
 }
 
-// 리뷰 하나로 본문 + 인라인 코멘트를 한 번에 단다. 돌려주는 값은 리뷰 URL.
+export interface CreatedReview {
+  reviewId: number;
+  url: string;
+}
+
+// 리뷰 하나로 본문 + 인라인 코멘트를 한 번에 단다.
 export const createReview = async (
   ref: ParsedPrReference,
   payload: CreateReviewPayload,
-): Promise<string> => {
+): Promise<CreatedReview> => {
   const raw = await runGh(
     [
       'api',
@@ -213,6 +218,190 @@ export const createReview = async (
     ],
     JSON.stringify(payload),
   );
-  const created = JSON.parse(raw) as { html_url?: string };
-  return created.html_url ?? `https://github.com/${ref.repo}/pull/${ref.number}`;
+  const created = JSON.parse(raw) as { id: number; html_url?: string };
+  return {
+    reviewId: created.id,
+    url: created.html_url ?? `https://github.com/${ref.repo}/pull/${ref.number}`,
+  };
+};
+
+// 페이지마다 배열이 오는 목록 API 를 하나로 합친다.
+const ghApiList = async <T>(path: string): Promise<T[]> => {
+  const raw = await runGh(['api', '--paginate', '--slurp', path]);
+  return (JSON.parse(raw) as T[][]).flat();
+};
+
+export interface PullComment {
+  id: number;
+  inReplyToId?: number;
+  userLogin: string;
+  body: string;
+  createdAt: string;
+  path: string;
+  url: string;
+}
+
+interface GhPullComment {
+  id: number;
+  in_reply_to_id?: number;
+  user: { login: string } | null;
+  body: string;
+  created_at: string;
+  path: string;
+  html_url: string;
+}
+
+const toPullComment = (comment: GhPullComment): PullComment => ({
+  id: comment.id,
+  ...(comment.in_reply_to_id === undefined ? {} : { inReplyToId: comment.in_reply_to_id }),
+  userLogin: comment.user?.login ?? '',
+  body: comment.body,
+  createdAt: comment.created_at,
+  path: comment.path,
+  url: comment.html_url,
+});
+
+// 방금 만든 리뷰에 달린 인라인 코멘트 — 지적 카드와 코멘트 id 를 잇는 데 쓴다.
+export const listReviewComments = async (
+  ref: ParsedPrReference,
+  reviewId: number,
+): Promise<PullComment[]> =>
+  (
+    await ghApiList<GhPullComment>(
+      `repos/${ref.repo}/pulls/${ref.number}/reviews/${reviewId}/comments`,
+    )
+  ).map(toPullComment);
+
+export const listPullComments = async (
+  ref: ParsedPrReference,
+): Promise<PullComment[]> =>
+  (await ghApiList<GhPullComment>(`repos/${ref.repo}/pulls/${ref.number}/comments`)).map(
+    toPullComment,
+  );
+
+export interface CommentReaction {
+  content: string; // '+1' | '-1' | ...
+  userLogin: string;
+  createdAt: string;
+}
+
+export const listCommentReactions = async (
+  repo: string,
+  commentId: number,
+): Promise<CommentReaction[]> =>
+  (
+    await ghApiList<{ content: string; user: { login: string } | null; created_at: string }>(
+      `repos/${repo}/pulls/comments/${commentId}/reactions`,
+    )
+  ).map((reaction) => ({
+    content: reaction.content,
+    userLogin: reaction.user?.login ?? '',
+    createdAt: reaction.created_at,
+  }));
+
+export interface PullRequestStatus {
+  state: 'OPEN' | 'CLOSED' | 'MERGED';
+  authorLogin: string;
+}
+
+export const getPullRequestStatus = async (
+  ref: ParsedPrReference,
+): Promise<PullRequestStatus> => {
+  const raw = await runGh([
+    'pr',
+    'view',
+    String(ref.number),
+    '--repo',
+    ref.repo,
+    '--json',
+    'state,author',
+  ]);
+  const view = JSON.parse(raw) as { state: PullRequestStatus['state']; author: { login: string } };
+  return { state: view.state, authorLogin: view.author.login };
+};
+
+let viewerLogin: string | undefined;
+
+// 학습 재료(기각 사유)는 이 계정이 쓴 답글만 인정한다.
+export const getViewerLogin = async (): Promise<string> => {
+  viewerLogin ??= (await runGh(['api', 'user', '--jq', '.login'])).trim();
+  return viewerLogin;
+};
+
+// 없는 파일이면 undefined. 그 밖의 실패는 던진다.
+export const getFileContent = async ({
+  repo,
+  path,
+  ref,
+}: {
+  repo: string;
+  path: string;
+  ref: string;
+}): Promise<string | undefined> => {
+  try {
+    const raw = await runGh([
+      'api',
+      `repos/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(ref)}`,
+    ]);
+    const file = JSON.parse(raw) as { content?: string; encoding?: string; type?: string };
+    if (file.type !== 'file' || file.content === undefined) {
+      return undefined;
+    }
+    return Buffer.from(file.content, 'base64').toString('utf-8');
+  } catch (error: unknown) {
+    if (error instanceof Error && /HTTP 404|Not Found/.test(error.message)) {
+      return undefined;
+    }
+    throw error;
+  }
+};
+
+export interface OpenPullRequest {
+  repo: string;
+  number: number;
+  title: string;
+  isDraft: boolean;
+  headSha: string;
+  authorLogin: string;
+}
+
+export const listOpenPullRequests = async (
+  repo: string,
+  target: 'all' | 'review-requested' | 'mine',
+): Promise<OpenPullRequest[]> => {
+  const filter =
+    target === 'review-requested'
+      ? ['--search', 'review-requested:@me']
+      : target === 'mine'
+        ? ['--author', '@me']
+        : [];
+  const raw = await runGh([
+    'pr',
+    'list',
+    '--repo',
+    repo,
+    '--state',
+    'open',
+    ...filter,
+    '--json',
+    'number,title,isDraft,headRefOid,author',
+    '--limit',
+    '50',
+  ]);
+  return (
+    JSON.parse(raw) as {
+      number: number;
+      title: string;
+      isDraft: boolean;
+      headRefOid: string;
+      author: { login: string };
+    }[]
+  ).map((pr) => ({
+    repo,
+    number: pr.number,
+    title: pr.title,
+    isDraft: pr.isDraft,
+    headSha: pr.headRefOid,
+    authorLogin: pr.author.login,
+  }));
 };

@@ -47,7 +47,7 @@ export const sortBySeverity = (findings: ReviewFinding[]): ReviewFinding[] =>
     )
     .map((item) => item.finding);
 
-const findingBody = (finding: ReviewFinding): string =>
+export const findingBody = (finding: ReviewFinding): string =>
   `${REVIEW_MARKER} · ${finding.category} / ${finding.severity}\n\n${finding.body.trim()}`;
 
 const findingListItem = (finding: ReviewFinding): string => {
@@ -60,6 +60,8 @@ const findingListItem = (finding: ReviewFinding): string => {
 
 export interface PublicationPlan {
   payload: CreateReviewPayload;
+  // payload.comments 와 같은 순서의 원본 지적 (같은 객체 참조) — 게시 후 코멘트 id 를 잇는 데 쓴다.
+  inlineFindings: ReviewFinding[];
   inlineCount: number;
   // 줄에 못 붙여 본문 목록으로 내린 지적.
   bodyCount: number;
@@ -89,6 +91,7 @@ export const planPublication = ({
   const hunks = parseDiffHunks(diff.rawDiff);
 
   const comments: ReviewCommentPayload[] = [];
+  const inlineFindings: ReviewFinding[] = [];
   const bodyFindings: ReviewFinding[] = [];
   for (const finding of toPost) {
     const line =
@@ -102,6 +105,7 @@ export const planPublication = ({
         side: 'RIGHT',
         body: findingBody(finding),
       });
+      inlineFindings.push(finding);
     } else {
       bodyFindings.push(finding);
     }
@@ -142,6 +146,7 @@ export const planPublication = ({
       event: 'COMMENT',
       comments,
     },
+    inlineFindings,
     inlineCount: comments.length,
     bodyCount: bodyFindings.length,
     droppedCount,

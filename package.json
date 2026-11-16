@@ -2,16 +2,18 @@
   "name": "pr-review-cli",
   "version": "0.1.0",
   "private": true,
-  "description": "이대리 코드 리뷰 워커를 떼어 낸 개인용 PR 리뷰 CLI (codex / claude 구독 CLI 사용)",
+  "description": "이대리 코드 리뷰 워커를 떼어 낸 개인용 PR 리뷰 봇 — 로컬 대시보드, 레포 규칙 반영, 기각 학습",
   "type": "module",
   "bin": {
     "pr-review": "dist/cli.js"
   },
   "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "cli": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test test/*.test.ts",
-    "dev": "tsx src/cli.ts"
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "engines": {
     "node": ">=22.13"

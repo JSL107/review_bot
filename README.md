@@ -1,7 +1,7 @@
 # review_bot
 
-GitHub PR 을 로컬 `codex` / `claude` CLI(구독 인증)로 리뷰하는 개인용 CLI.
-이대리(personal_agents)의 코드 리뷰 워커에서 리뷰 프롬프트·응답 파서·diff 정제·게시 좌표 보정만 떼어 냈다. DB·Slack·NestJS 없이 `gh` 로그인만 있으면 돈다.
+GitHub PR 을 로컬 `codex` / `claude` CLI(구독 인증)로 리뷰하고, 레포의 규칙 문서와 내가 기각한 지적에서 배워 다음 리뷰에 반영하는 개인용 리뷰 봇.
+이대리(personal_agents)의 코드 리뷰 워커에서 떼어 냈다. Postgres·Redis·Slack 없이 `gh` 로그인과 상태 파일 하나로 돈다.
 
 ## 준비
 
@@ -11,17 +11,36 @@ GitHub PR 을 로컬 `codex` / `claude` CLI(구독 인증)로 리뷰하는 개�
 
 ```bash
 pnpm install
-pnpm build
-pnpm link --global   # 어디서나 `pr-review` 로 실행
+pnpm dev        # http://127.0.0.1:4317
 ```
 
-## 사용
+## pnpm dev 로 켜면
+
+로컬 페이지 하나와, 그 뒤에서 도는 자동 작업이 함께 뜬다.
+
+- **설정**: 모델(codex·claude), 주기, 게시 상한, 감시할 레포를 정한다. 레포마다 자동 리뷰, 바로 게시, 리뷰할 PR 범위(전부·리뷰 요청·내 PR), draft 제외, 학습 사용, 규칙 문서 목록, 직접 적는 규약을 따로 켠다.
+- **대시보드**: 지금 하는 일과 대기열, 레포별 리뷰·게시·채택·기각·채택률, 최근 기록.
+- **리뷰**: 자동·페이지·CLI 로 돌린 리뷰 전부. 게시하지 않은 리뷰는 여기서 골라 게시한다. PR 을 직접 넣어 리뷰할 수도 있다.
+- **학습**: 👍·👎 없이 답글만 달린 지적을 채택·기각으로 판정하고, 다음 리뷰에 실릴 규약을 미리 보고, 잘못 굳은 기각을 학습에서 뺀다.
+
+자동 작업은 한 줄로 차례대로 돈다. PR 찾기(기본 10분)는 이미 본 커밋을 건너뛰고 새 push 만 다시 리뷰한다. 반응 걷기(기본 30분)는 최근 30일 안에 게시한 지적을 대상으로 한다.
+
+## 리뷰가 배우는 방법
+
+**레포 규칙 (A).** PR 의 base 브랜치에서 `AGENTS.md`·`CLAUDE.md`·`CODE_RULES.md`·`.github/copilot-instructions.md`·`REVIEW.md` 를 읽어 싣는다. head 가 아니라 base 에서 읽는 이유는, PR 작성자가 규칙 파일을 고쳐 자기 PR 의 리뷰 기준을 바꾸지 못하게 하기 위해서다. 문서에 `## Code Review Rules`(또는 `## 리뷰 규칙`) 섹션이 있으면 그 섹션만 쓴다. 설정에 직접 적은 규약이 맨 앞에 붙는다.
+
+**기각 학습 (B).** 게시한 인라인 지적에 👍 를 누르면 채택, 👎 를 누르면 기각이다. 기각 사유로는 **내 gh 계정이 쓴 답글만** 쓴다. 공개 레포에서 남이 PR 을 올려 자기 답글을 규약으로 굳히지 못하게 하려는 것이다. 최근 90일 안에 같은 종류(정확성·테스트·구조…)가 40자 이상 사유와 함께 두 번 이상 기각되면, 다음 리뷰부터 "이 레포에서는 정상" 이라는 규약으로 실린다. 보안 지적은 몇 번 기각돼도 학습하지 않는다.
+
+리뷰 기록에는 그 리뷰에 실린 규칙 문서와 학습 규약이 함께 남아, 무엇이 리뷰를 바꿨는지 볼 수 있다.
+
+## 단발 CLI
 
 ```bash
+pnpm build && pnpm link --global
 pr-review                                   # 선택 화면: PR → 모델 → 출력 방식
 pr-review owner/repo#123 -m claude          # 터미널 출력
-pr-review https://github.com/o/r/pull/1 -m codex --comment   # 게시 전 확인 후 PR 리뷰로 게시
-pr-review o/r#1 -m codex --json > review.json                # JSON
+pr-review https://github.com/o/r/pull/1 -m codex --comment   # 게시 전 확인 후 게시
+pr-review o/r#1 -m codex --json > review.json
 ```
 
 | 옵션 | 설명 |
@@ -34,20 +53,23 @@ pr-review o/r#1 -m codex --json > review.json                # JSON
 | `-i, --instruction <문장>` | 이번 리뷰에 덧붙일 지시 |
 | `--timeout <초>` | 모델 호출 제한(기본 600) |
 
-## 동작
+CLI 로 돌린 리뷰도 같은 상태 파일에 쌓여 대시보드와 학습에 들어간다. 다만 `pnpm dev` 가 켜진 동안 CLI 를 돌리면, 서버가 다음에 저장할 때 CLI 기록을 덮어쓴다. 서버가 켜져 있으면 페이지의 리뷰 탭을 쓴다.
 
-1. `gh` 로 PR 상세 → diff → 상세 재조회. 그 사이 push 가 들어오면 한 번 다시 받는다.
-2. lockfile·스냅샷·dist 는 빼고, `.env`·`*.pem` 같은 비밀 파일은 내용을 모델에 보내지 않는다. 120KB 를 넘으면 테스트 파일을 뒤로 보내고 자른다.
-3. PR 본문·diff 는 `<untrusted-input>` 경계로 감싸 지시가 아닌 데이터로 읽힌다. 추가된 줄의 숨은 유니코드(Trojan Source)는 따로 경고한다.
-4. 모델 호출은 stdin 으로만 넘긴다. codex 는 빈 임시 폴더만 읽을 수 있게 권한 프로필로 잠그고, claude 는 도구·MCP·사용자 설정을 전부 끈다. 주입된 PR 이 로컬 파일을 읽혀 코멘트로 내보내지 못하게 하기 위해서다.
-5. 응답 JSON 을 검증하고, 판단 보류와 등급이 어긋나면 코드가 보정한다.
-6. 게시는 GitHub 리뷰 하나(`COMMENT`)로 한다. 지적 줄이 diff 밖이면 20줄 안의 hunk 경계로 당기고, 그래도 못 붙이면 본문 목록으로 내린다. 인라인이 거부되면 전부 본문으로 다시 게시한다.
+## 안전장치
 
-이대리에서 가져오지 않은 것: 기각에서 학습한 규약, diff 밖 관련 코드·기존 테스트 첨부, 레포 사본 읽기, codex→claude 자동 폴백, 위험 지도 코멘트.
+- 페이지 서버는 `127.0.0.1` 에만 열린다. Host 헤더를 검사하고, 쓰기 요청은 페이지가 붙이는 전용 헤더가 있어야 받는다. 다른 웹사이트가 브라우저를 통해 이 서버로 게시를 일으키지 못하게 하기 위해서다.
+- 모델 호출은 프롬프트를 stdin 으로만 넘긴다. codex 는 빈 임시 폴더만 읽게 잠그고, claude 는 도구·MCP·사용자 설정을 전부 끈다. 주입된 PR 이 로컬 파일을 읽혀 코멘트로 내보내지 못하게 하려는 것이다.
+- `.env`·`*.pem` 같은 비밀 파일은 diff 에서 내용을 빼고 보낸다. PR 본문·diff 는 `<untrusted-input>` 경계로 감싼다.
+- 게시는 항상 `COMMENT` 리뷰다. 승인과 수정 요청은 사람이 한다. 리뷰 뒤 새 커밋이 올라왔으면 게시를 거절한다.
+
+## 상태 파일
+
+`~/.review_bot/state.json` (`REVIEW_BOT_HOME` 으로 바꿀 수 있다). 포트는 `PORT`(기본 4317).
 
 ## 개발
 
 ```bash
 pnpm typecheck && pnpm test && pnpm build
-pnpm dev -- o/r#1 -m claude     # 빌드 없이 실행
 ```
+
+이대리에서 가져오지 않은 것: diff 밖 관련 코드·기존 테스트 첨부, 레포 사본 읽기, codex→claude 자동 폴백, 위험 지도 코멘트, 답글만 달린 지적의 LLM 판정(여기서는 페이지에서 사람이 판정한다).
