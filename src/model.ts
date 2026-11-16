@@ -76,15 +76,8 @@ const buildPayload = ({
 // `--sandbox` 와 함께 넘기면 프로필이 조용히 무시되므로 섞지 않는다.
 const CODEX_PERMISSION_PROFILE = 'pr_review_read_lock';
 
-export const buildCodexArgs = ({
-  workDir,
-  outputFile,
-  model,
-}: {
-  workDir: string;
-  outputFile: string;
-  model?: string;
-}): string[] => {
+// 읽기 잠금 권한 인자. 리뷰 호출과 환경 점검(doctor 의 canary)이 같은 값을 쓴다 — 갈리면 점검이 거짓 통과한다.
+export const buildCodexPermissionArgs = (workDir: string): string[] => {
   const readableRoots = [
     workDir,
     `${realHome()}/.local/bin`,
@@ -97,12 +90,26 @@ export const buildCodexArgs = ({
     '"/private/tmp"="deny"',
   ];
   return [
-    'exec',
-    '--skip-git-repo-check',
     '-c',
     `default_permissions="${CODEX_PERMISSION_PROFILE}"`,
     '-c',
     `permissions.${CODEX_PERMISSION_PROFILE}.filesystem={${entries.join(',')}}`,
+  ];
+};
+
+export const buildCodexArgs = ({
+  workDir,
+  outputFile,
+  model,
+}: {
+  workDir: string;
+  outputFile: string;
+  model?: string;
+}): string[] => {
+  return [
+    'exec',
+    '--skip-git-repo-check',
+    ...buildCodexPermissionArgs(workDir),
     '--ephemeral',
     // 사용자 config 의 MCP 서버·플러그인이 매 호출 기동되지 않게 한다.
     '--ignore-user-config',

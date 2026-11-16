@@ -57,7 +57,7 @@ interface GhPrView {
   headRefOid: string;
   additions: number;
   deletions: number;
-  files: { path: string }[];
+  files: { path: string; additions: number; deletions: number }[];
 }
 
 const getPullRequest = async (
@@ -85,6 +85,9 @@ const getPullRequest = async (
     additions: view.additions,
     deletions: view.deletions,
     changedFiles: view.files.map((file) => file.path),
+    changedLinesByFile: Object.fromEntries(
+      view.files.map((file) => [file.path, file.additions + file.deletions]),
+    ),
   };
 };
 
@@ -422,3 +425,24 @@ export const listUserRepos = async (): Promise<UserRepo[]> =>
     .filter((repo) => !repo.archived)
     .map((repo) => ({ repo: repo.full_name, private: repo.private, pushedAt: repo.pushed_at }))
     .sort((left, right) => right.pushedAt.localeCompare(left.pushedAt));
+
+export interface RepoTree {
+  entries: { path: string; size: number }[];
+  // GitHub 가 큰 레포의 트리를 자르면 true. 잘렸으면 짝 테스트 경로를 추측해 개별 조회한다.
+  truncated: boolean;
+}
+
+// 기존 테스트 짝을 찾는 데 쓰는 파일 목록. 트리 조회 1회 — 본문은 받지 않는다.
+export const listTree = async (repo: string, ref: string): Promise<RepoTree> => {
+  const raw = await runGh(['api', `repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`]);
+  const tree = JSON.parse(raw) as {
+    tree: { path: string; type: string; size?: number }[];
+    truncated: boolean;
+  };
+  return {
+    entries: tree.tree
+      .filter((entry) => entry.type === 'blob')
+      .map((entry) => ({ path: entry.path, size: entry.size ?? 0 })),
+    truncated: tree.truncated,
+  };
+};

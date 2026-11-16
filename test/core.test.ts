@@ -36,6 +36,7 @@ const detail: PullRequestDetail = {
   additions: 1,
   deletions: 0,
   changedFiles: ['src/a.ts'],
+  changedLinesByFile: { 'src/a.ts': 1 },
 };
 
 const diffOf = (raw: string): PullRequestDiff => ({

@@ -1,3 +1,4 @@
+import { loadCompanionSpecs, renderCompanionSpecs } from './companion-tests.js';
 import {
   createReview,
   fetchConsistentSnapshot,
@@ -74,11 +75,12 @@ export const runReview = async ({
     record.truncated = diff.truncated;
 
     const repoConfig = store.repoConfig(ref.repo);
-    const rules = await loadRepoRules({
-      config: repoConfig,
-      baseRef: detail.baseRef,
-      warn: (message) => store.log('warn', message),
-    });
+    const warn = (message: string): void => store.log('warn', message);
+    const [rules, companionSpecs] = await Promise.all([
+      loadRepoRules({ config: repoConfig, baseRef: detail.baseRef, warn }),
+      loadCompanionSpecs({ detail, diff, warn }),
+    ]);
+    record.testsAttached = companionSpecs?.includedPaths.length ?? 0;
     const learned = repoConfig.learning
       ? renderLearnedConventions(selectLearningRows(store.state.findings, ref.repo))
       : { block: '', categories: [] };
@@ -90,7 +92,7 @@ export const runReview = async ({
     );
     // 규약은 diff 뒤에 붙인다 — "지적하지 말라" 류는 diff 를 다 읽은 뒤 마지막에 있어야 덜 묻힌다.
     const completion = await complete({
-      prompt: buildReviewPrompt({ detail, diff, instruction }) + rules.block + learned.block,
+      prompt: buildReviewPrompt({ detail, diff, instruction }) + renderCompanionSpecs(companionSpecs) + rules.block + learned.block,
       systemPrompt: CODE_REVIEWER_SYSTEM_PROMPT,
       options: { provider, model: modelName || undefined, timeoutMs },
     });
