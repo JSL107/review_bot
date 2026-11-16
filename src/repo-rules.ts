@@ -65,7 +65,7 @@ export const renderRepoRules = (
 
   const extra = extraRules.trim();
   if (extra.length > 0) {
-    sections.push(`### 설정에 적은 규약\n${clip(extra, RULES_FILE_MAX_BYTES)}`);
+    sections.push(`### 설정에 적은 규약 (리뷰어 본인이 적은 것)\n${clip(extra, RULES_FILE_MAX_BYTES)}`);
     used.push('(설정)');
     bytes += Buffer.byteLength(sections[0], 'utf-8');
   }
