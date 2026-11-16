@@ -405,3 +405,20 @@ export const listOpenPullRequests = async (
     authorLogin: pr.author.login,
   }));
 };
+
+export interface UserRepo {
+  repo: string;
+  private: boolean;
+  pushedAt: string;
+}
+
+// 설정 화면의 레포 고르기용. 내가 소유·협업·조직 멤버인 레포를 최근 push 순으로.
+export const listUserRepos = async (): Promise<UserRepo[]> =>
+  (
+    await ghApiList<{ full_name: string; private: boolean; pushed_at: string; archived: boolean }>(
+      'user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member',
+    )
+  )
+    .filter((repo) => !repo.archived)
+    .map((repo) => ({ repo: repo.full_name, private: repo.private, pushedAt: repo.pushed_at }))
+    .sort((left, right) => right.pushedAt.localeCompare(left.pushedAt));

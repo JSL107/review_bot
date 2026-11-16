@@ -1,13 +1,16 @@
+import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 
 import { Daemon } from './daemon.js';
-import { getViewerLogin } from './github.js';
+import { CheckResult, runDoctor } from './doctor.js';
+import { fetchConsistentSnapshot, getViewerLogin, listUserRepos, UserRepo } from './github.js';
 import {
   renderLearnedConventions,
   selectLearningRows,
 } from './learning.js';
 import { parsePrReference } from './pr-reference.js';
+import { planPublication } from './publish.js';
 import {
   AppConfig,
   defaultRepoConfig,
@@ -26,6 +29,27 @@ const HOST = '127.0.0.1';
 const PAGE_PATH = new URL('../web/index.html', import.meta.url);
 const REPO_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 const RECENT_REVIEWS = 150;
+const TREND_WEEKS = 8;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DOCTOR_TTL_MS = 5 * 60 * 1000;
+const REPOS_TTL_MS = 10 * 60 * 1000;
+
+// 점검과 레포 목록은 gh·CLI 를 여러 번 부르므로 잠시 담아 둔다.
+const cached = <T>(ttlMs: number, load: () => Promise<T>): ((refresh?: boolean) => Promise<T>) => {
+  let value: { at: number; data: Promise<T> } | undefined;
+  return (refresh = false) => {
+    if (refresh || value === undefined || Date.now() - value.at > ttlMs) {
+      const data = load();
+      value = { at: Date.now(), data };
+      data.catch(() => {
+        value = undefined;
+      });
+    }
+    return value.data;
+  };
+};
+const doctor = cached<CheckResult[]>(DOCTOR_TTL_MS, runDoctor);
+const userRepos = cached<UserRepo[]>(REPOS_TTL_MS, listUserRepos);
 
 class HttpError extends Error {
   constructor(
@@ -160,6 +184,41 @@ const buildState = async (): Promise<unknown> => {
     };
   });
 
+  // 최근 8주 판정 추이 (주 단위, 오래된 주 → 최근 주). 판정 시각 기준.
+  const now = Date.now();
+  const trend = Array.from({ length: TREND_WEEKS }, (_, index) => {
+    const end = now - (TREND_WEEKS - 1 - index) * WEEK_MS;
+    const start = end - WEEK_MS;
+    const inWeek = findings.filter((finding) => {
+      const at = Date.parse(finding.decidedAt ?? '');
+      return at > start && at <= end;
+    });
+    return {
+      weekEnd: new Date(end).toISOString(),
+      accepted: inWeek.filter((finding) => finding.status === 'ACCEPTED').length,
+      rejected: inWeek.filter((finding) => finding.status === 'REJECTED').length,
+    };
+  });
+  const categoryCounts = new Map<string, { accepted: number; rejected: number }>();
+  for (const finding of findings) {
+    if (finding.status !== 'ACCEPTED' && finding.status !== 'REJECTED') {
+      continue;
+    }
+    const entry = categoryCounts.get(finding.category) ?? { accepted: 0, rejected: 0 };
+    if (finding.status === 'ACCEPTED') {
+      entry.accepted += 1;
+    } else {
+      entry.rejected += 1;
+    }
+    categoryCounts.set(finding.category, entry);
+  }
+  const durations = reviews
+    .filter((review) => review.status === 'done' && review.finishedAt !== undefined)
+    .slice(-30)
+    .map((review) => Date.parse(review.finishedAt as string) - Date.parse(review.createdAt));
+  const avgReviewSec =
+    durations.length === 0 ? null : Math.round(durations.reduce((sum, ms) => sum + ms, 0) / durations.length / 1000);
+
   let viewer: string | null = null;
   try {
     viewer = await getViewerLogin();
@@ -173,6 +232,11 @@ const buildState = async (): Promise<unknown> => {
     config,
     status: daemon.status(),
     stats,
+    trend,
+    categories: [...categoryCounts.entries()]
+      .map(([category, counts]) => ({ category, ...counts }))
+      .sort((left, right) => right.rejected + right.accepted - (left.rejected + left.accepted)),
+    avgReviewSec,
     reviews: recent.map((review) => ({ ...review, findings: findingsByReview.get(review.id) ?? [] })),
     // 학습 탭: 판정 대기와 기각 카드 전부(창 밖 포함 — 제외 토글을 위해).
     judgeQueue: findings.filter((finding) => finding.status === 'NEEDS_JUDGE'),
@@ -199,13 +263,45 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
     return;
   }
 
+  if (method === 'GET' && url.pathname === '/api/doctor') {
+    sendJson(response, 200, await doctor(url.searchParams.has('refresh')));
+    return;
+  }
+  if (method === 'GET' && url.pathname === '/api/repos') {
+    sendJson(response, 200, await userRepos(url.searchParams.has('refresh')));
+    return;
+  }
+  const previewMatch = /^\/api\/reviews\/([\w-]+)\/preview$/.exec(url.pathname);
+  if (method === 'GET' && previewMatch) {
+    // 게시 전 미리보기 — 실제 게시와 같은 계획 함수로, 지금 PR 상태 기준으로 계산한다.
+    const record = store.reviewById(previewMatch[1]);
+    if (record?.review === undefined) {
+      throw new HttpError(404, '미리 볼 리뷰가 없습니다.');
+    }
+    const snapshot = await fetchConsistentSnapshot({ repo: record.repo, number: record.number });
+    const plan = planPublication({
+      detail: snapshot.detail,
+      diff: snapshot.diff,
+      review: { ...record.review, findings: store.findingsOf(record.id) },
+      inlineMax: store.state.config.inlineMax,
+    });
+    sendJson(response, 200, {
+      stale: snapshot.detail.headSha !== record.headSha,
+      headSha: snapshot.detail.headSha,
+      body: plan.payload.body,
+      comments: plan.payload.comments.map(({ path, line, body }) => ({ path, line, body })),
+      droppedCount: plan.droppedCount,
+    });
+    return;
+  }
+
   if (method !== 'GET' && request.headers['x-review-bot'] !== '1') {
     throw new HttpError(403, '페이지 밖에서 온 요청은 받지 않습니다.');
   }
   const body = method === 'GET' ? {} : await readBody(request);
 
   if (method === 'PUT' && url.pathname === '/api/config') {
-    store.state.config = parseConfig(body);
+    store.setConfig(parseConfig(body));
     store.log('info', '설정을 저장했습니다.');
     store.save();
     sendJson(response, 200, { ok: true });
@@ -235,7 +331,7 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
     return;
   }
   if (method === 'POST' && url.pathname === '/api/pause') {
-    store.state.config.paused = body.paused === true;
+    store.setConfig({ ...store.state.config, paused: body.paused === true });
     store.log('info', store.state.config.paused ? '자동 실행을 멈췄습니다.' : '자동 실행을 다시 켰습니다.');
     store.save();
     sendJson(response, 200, { ok: true });
@@ -252,6 +348,23 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
       throw new HttpError(409, '이미 게시한 리뷰입니다.');
     }
     sendJson(response, 200, { queued: daemon.enqueue({ kind: 'publish', reviewId: record.id }) });
+    return;
+  }
+
+  const rereviewMatch = /^\/api\/reviews\/([\w-]+)\/rereview$/.exec(url.pathname);
+  if (method === 'POST' && rereviewMatch) {
+    const record = store.reviewById(rereviewMatch[1]);
+    if (record === undefined) {
+      throw new HttpError(404, '리뷰를 찾을 수 없습니다.');
+    }
+    sendJson(response, 200, {
+      queued: daemon.enqueue({
+        kind: 'review',
+        ref: { repo: record.repo, number: record.number },
+        trigger: 'manual',
+        publish: false,
+      }),
+    });
     return;
   }
 
@@ -292,9 +405,45 @@ const server = createServer((request, response) => {
   });
 });
 
+// 켜자마자 브라우저를 연다. NO_OPEN=1 이나 CI 에서는 열지 않는다.
+const openBrowser = (url: string): void => {
+  if (process.env.NO_OPEN === '1' || process.env.CI) {
+    return;
+  }
+  const [command, args] =
+    process.platform === 'darwin'
+      ? ['open', [url]]
+      : process.platform === 'win32'
+        ? ['cmd', ['/c', 'start', '', url]]
+        : ['xdg-open', [url]];
+  execFile(command, args as string[], () => {
+    // 열지 못해도 주소는 터미널에 찍혀 있다.
+  });
+};
+
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`포트 ${PORT} 를 이미 쓰고 있습니다. 이미 켜져 있다면 http://${HOST}:${PORT} 를 여세요. 다른 포트: PORT=4318 pnpm dev`);
+  } else {
+    console.error(error.message);
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, HOST, () => {
-  console.log(`review_bot 대시보드: http://${HOST}:${PORT}  (상태 파일 ${stateFilePath()})`);
+  const url = `http://${HOST}:${PORT}`;
+  console.log(`review_bot 대시보드: ${url}  (상태 파일 ${stateFilePath()})`);
+  console.log('끄려면 Ctrl+C');
   daemon.start();
+  openBrowser(url);
+  // 막히는 곳을 터미널에서도 바로 알린다. 자세한 안내는 대시보드 첫 화면에 있다.
+  doctor()
+    .then((results) => {
+      for (const result of results.filter((item) => item.level === 'fail')) {
+        console.warn(`✘ ${result.label}: ${result.detail}${result.fix ? ` → ${result.fix}` : ''}`);
+      }
+    })
+    .catch(() => {});
 });
 
 const shutdown = (): void => {

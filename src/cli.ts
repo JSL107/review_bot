@@ -21,7 +21,7 @@ const HELP = `pr-review — codex / claude CLI 로 GitHub PR 을 리뷰한다
 
 옵션
   -m, --model <codex|claude>   리뷰 모델 (생략하면 선택 화면, 비대화형이면 codex)
-      --model-name <이름>       세부 모델 (기본 codex=gpt-6-sol, claude=opus)
+      --model-name <이름>       세부 모델 (기본: codex 는 ~/.codex/config.toml, claude 는 계정 기본값)
   -c, --comment                 결과를 PR 리뷰 코멘트로 게시 (게시 전 확인)
       --no-comment              터미널에만 출력
   -y, --yes                     게시 확인을 건너뛴다 (비대화형에서 게시하려면 필수)

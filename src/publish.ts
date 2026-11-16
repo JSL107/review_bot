@@ -47,15 +47,36 @@ export const sortBySeverity = (findings: ReviewFinding[]): ReviewFinding[] =>
     )
     .map((item) => item.finding);
 
+// GitHub 에서 사람이 읽는 라벨. 내부 값(CORRECTNESS 등)은 대시보드·학습에서만 쓴다.
+const CATEGORY_LABEL: Record<ReviewFinding['category'], string> = {
+  CORRECTNESS: '정확성',
+  SECURITY: '보안',
+  RELIABILITY: '안정성',
+  TEST: '테스트',
+  ARCHITECTURE: '구조',
+  READABILITY: '가독성',
+  STYLE: '스타일',
+  UNCLASSIFIED: '기타',
+};
+
+const SEVERITY_LABEL: Record<ReviewFinding['severity'], string> = {
+  MUST_FIX: '머지 전 필수',
+  MISSING_TEST: '테스트 누락',
+  NICE_TO_HAVE: '권장',
+};
+
+const findingLabel = (finding: ReviewFinding): string =>
+  `${SEVERITY_LABEL[finding.severity]} · ${CATEGORY_LABEL[finding.category]}`;
+
 export const findingBody = (finding: ReviewFinding): string =>
-  `${REVIEW_MARKER} · ${finding.category} / ${finding.severity}\n\n${finding.body.trim()}`;
+  `${REVIEW_MARKER} · ${findingLabel(finding)}\n\n${finding.body.trim()}`;
 
 const findingListItem = (finding: ReviewFinding): string => {
   const location =
     finding.file === undefined
       ? ''
       : ` \`${finding.file}${finding.line === undefined ? '' : `:${finding.line}`}\``;
-  return `- **${finding.category} / ${finding.severity}**${location} — ${finding.body.trim().replace(/\n/g, '\n  ')}`;
+  return `- **${findingLabel(finding)}**${location} — ${finding.body.trim().replace(/\n/g, '\n  ')}`;
 };
 
 export interface PublicationPlan {

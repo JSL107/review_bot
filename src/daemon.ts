@@ -25,6 +25,9 @@ type Job =
 
 export interface DaemonStatus {
   current?: string;
+  // 지금 작업의 단계 (조회 중 → 리뷰 중 → 게시 중) 와 시작 시각.
+  step?: string;
+  startedAt?: string;
   queue: string[];
   lastSweepAt?: string;
   nextSweepAt?: string;
@@ -55,6 +58,8 @@ const errorMessage = (error: unknown): string =>
 export class Daemon {
   private queue: Job[] = [];
   private current?: Job;
+  private step?: string;
+  private startedAt?: number;
   private lastSweepAt?: number;
   private lastHarvestAt?: number;
   private timer?: NodeJS.Timeout;
@@ -77,6 +82,8 @@ export class Daemon {
       ms === undefined ? undefined : new Date(ms).toISOString();
     return {
       current: this.current === undefined ? undefined : describe(this.current),
+      step: this.step,
+      startedAt: iso(this.startedAt),
       queue: this.queue.map(describe),
       lastSweepAt: iso(this.lastSweepAt),
       nextSweepAt: config.paused
@@ -124,6 +131,8 @@ export class Daemon {
     }
     while (this.queue.length > 0) {
       this.current = this.queue.shift();
+      this.step = undefined;
+      this.startedAt = Date.now();
       const job = this.current as Job;
       try {
         await this.run(job);
@@ -135,6 +144,8 @@ export class Daemon {
         }
       } finally {
         this.current = undefined;
+        this.step = undefined;
+        this.startedAt = undefined;
       }
     }
   }
@@ -153,6 +164,9 @@ export class Daemon {
           instruction: job.instruction,
           publish: job.publish ? { inlineMax: config.inlineMax } : undefined,
           headShaHint: job.headShaHint,
+          onProgress: (message) => {
+            this.step = message;
+          },
         });
         return;
       }
@@ -161,7 +175,14 @@ export class Daemon {
         if (record === undefined) {
           throw new Error('리뷰를 찾을 수 없습니다.');
         }
-        await publishReview({ store: this.store, record, inlineMax: config.inlineMax });
+        await publishReview({
+          store: this.store,
+          record,
+          inlineMax: config.inlineMax,
+          onProgress: (message) => {
+            this.step = message;
+          },
+        });
         return;
       }
       case 'sweep':

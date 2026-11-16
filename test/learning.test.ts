@@ -168,4 +168,24 @@ describe('저장소', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it('두 프로세스가 같은 파일에 저장해도 서로의 리뷰를 지우지 않는다', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'review-bot-test-'));
+    try {
+      const path = join(dir, 'state.json');
+      const server = new Store(path);
+      server.setConfig({ ...server.state.config, inlineMax: 7 });
+      server.save();
+      const cli = new Store(path);
+      server.addReview({ repo: 'o/r', number: 1, title: 'server', headSha: 's', trigger: 'sweep' });
+      server.save();
+      cli.addReview({ repo: 'o/r', number: 2, title: 'cli', headSha: 's', trigger: 'cli' });
+      cli.save(); // 설정을 안 바꾼 쪽은 디스크 설정을 따른다
+      server.save();
+      const reloaded = new Store(path);
+      assert.deepEqual(reloaded.state.reviews.map((review) => review.title).sort(), ['cli', 'server']);
+      assert.equal(reloaded.state.config.inlineMax, 7);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

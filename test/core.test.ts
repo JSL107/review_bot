@@ -188,6 +188,11 @@ describe('프롬프트·CLI 인자', () => {
     assert.ok(args.some((arg) => arg.includes('"/w"="read"') && arg.includes('"/private/tmp"="deny"')));
     assert.ok(args.includes('--ignore-user-config'));
   });
+  it('모델을 고르지 않으면 모델 인자를 넘기지 않는다', () => {
+    assert.ok(!buildCodexArgs({ workDir: '/w', outputFile: '/w/o' }).some((arg) => arg.startsWith('model=')));
+    assert.ok(!buildClaudeArgs().includes('--model'));
+    assert.ok(buildCodexArgs({ workDir: '/w', outputFile: '/w/o', model: 'x' }).includes('model="x"'));
+  });
   it('claude 는 도구·MCP·사용자 설정을 끈다', () => {
     const args = buildClaudeArgs('opus');
     assert.deepEqual(args.slice(args.indexOf('--tools'), args.indexOf('--tools') + 2), ['--tools', '']);

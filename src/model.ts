@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { readCodexConfigModel } from './doctor.js';
 import { ReviewError } from './review.type.js';
 
 // 이대리 src/model-router/infrastructure/{codex,claude}-cli.provider.ts · cli-process.util.ts 에서
@@ -17,9 +18,8 @@ export interface ModelOptions {
   timeoutMs: number;
 }
 
-// --ignore-user-config 로 사용자 config 를 안 읽으므로 모델을 명시해야 한다. 이대리 CODEX_MODEL 과 같은 값.
-export const DEFAULT_CODEX_MODEL = 'gpt-6-sol';
-export const DEFAULT_CLAUDE_MODEL = 'opus';
+// 모델을 고르지 않으면 codex 는 각자 ~/.codex/config.toml 의 모델을, 그것도 없으면 CLI 기본값을 쓴다.
+// claude 는 --model 을 넘기지 않아 계정 기본값을 쓴다 — 구독 플랜마다 쓸 수 있는 모델이 달라서다.
 const CODEX_REASONING_EFFORT = 'high';
 
 // prompt 는 argv 가 아니라 stdin 으로 넘긴다 — argv 는 `ps aux` 로 다른 프로세스가 읽는다.
@@ -83,7 +83,7 @@ export const buildCodexArgs = ({
 }: {
   workDir: string;
   outputFile: string;
-  model: string;
+  model?: string;
 }): string[] => {
   const readableRoots = [
     workDir,
@@ -106,8 +106,7 @@ export const buildCodexArgs = ({
     '--ephemeral',
     // 사용자 config 의 MCP 서버·플러그인이 매 호출 기동되지 않게 한다.
     '--ignore-user-config',
-    '-c',
-    `model="${model}"`,
+    ...(model === undefined ? [] : ['-c', `model=${JSON.stringify(model)}`]),
     '-c',
     `model_reasoning_effort="${CODEX_REASONING_EFFORT}"`,
     '--color',
@@ -119,13 +118,12 @@ export const buildCodexArgs = ({
 
 // 도구·MCP·사용자 설정(훅 포함)을 전부 끈다 — 리뷰는 입력만 보고 쓰면 되고, 파일 읽기 도구가 열려 있으면
 // 주입된 PR 이 로컬 파일을 읽혀 게시시킬 수 있다.
-export const buildClaudeArgs = (model: string): string[] => [
+export const buildClaudeArgs = (model?: string): string[] => [
   '-p',
   '--output-format',
   'json',
   '--no-session-persistence',
-  '--model',
-  model,
+  ...(model === undefined ? [] : ['--model', model]),
   '--tools',
   '',
   '--strict-mcp-config',
@@ -204,7 +202,7 @@ const runCodex = async ({
   timeoutMs,
 }: {
   payload: string;
-  model: string;
+  model?: string;
   timeoutMs: number;
 }): Promise<string> => {
   const workDir = await mkdtemp(join(tmpdir(), 'pr-review-'));
@@ -242,7 +240,7 @@ const runClaude = async ({
   timeoutMs,
 }: {
   payload: string;
-  model: string;
+  model?: string;
   timeoutMs: number;
 }): Promise<string> => {
   const workDir = await mkdtemp(join(tmpdir(), 'pr-review-'));
@@ -296,11 +294,10 @@ export const complete = async ({
     provider: options.provider,
   });
   if (options.provider === 'codex') {
-    const model = options.model ?? DEFAULT_CODEX_MODEL;
+    const model = options.model ?? readCodexConfigModel();
     const text = await runCodex({ payload, model, timeoutMs: options.timeoutMs });
-    return { text, modelUsed: `codex:${model}` };
+    return { text, modelUsed: `codex:${model ?? '기본'}` };
   }
-  const model = options.model ?? DEFAULT_CLAUDE_MODEL;
-  const text = await runClaude({ payload, model, timeoutMs: options.timeoutMs });
-  return { text, modelUsed: `claude:${model}` };
+  const text = await runClaude({ payload, model: options.model, timeoutMs: options.timeoutMs });
+  return { text, modelUsed: `claude:${options.model ?? '기본'}` };
 };

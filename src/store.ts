@@ -148,8 +148,16 @@ const emptyState = (): AppState => ({
 export class Store {
   state: AppState;
 
+  // 이 프로세스가 설정을 바꿨는가. 아니면 저장 때 디스크의 설정(다른 프로세스가 바꿨을 수 있다)을 따른다.
+  private configDirty = false;
+
   constructor(private readonly path = stateFilePath()) {
     this.state = this.load();
+  }
+
+  setConfig(config: AppConfig): void {
+    this.state.config = config;
+    this.configDirty = true;
   }
 
   private load(): AppState {
@@ -175,8 +183,32 @@ export class Store {
     };
   }
 
+  // pnpm dev 서버와 단발 CLI 가 같은 파일을 쓴다. 저장 직전에 디스크 내용과 id 기준으로 합쳐
+  // 서로의 리뷰를 지우지 않게 한다. 같은 id 는 이 프로세스의 것이 이긴다.
+  private mergeWithDisk(): void {
+    const disk = this.load();
+    const byId = <T extends { id: string }>(mine: T[], theirs: T[]): T[] => {
+      const known = new Set(mine.map((item) => item.id));
+      return [...mine, ...theirs.filter((item) => !known.has(item.id))];
+    };
+    this.state.reviews = byId(this.state.reviews, disk.reviews).sort((left, right) =>
+      left.createdAt.localeCompare(right.createdAt),
+    );
+    this.state.findings = byId(this.state.findings, disk.findings);
+    const seen = new Set(this.state.activity.map((entry) => `${entry.at}|${entry.message}`));
+    this.state.activity = [
+      ...this.state.activity,
+      ...disk.activity.filter((entry) => !seen.has(`${entry.at}|${entry.message}`)),
+    ].sort((left, right) => left.at.localeCompare(right.at));
+    if (!this.configDirty) {
+      this.state.config = disk.config;
+    }
+    this.configDirty = false;
+  }
+
   // 임시 파일에 쓰고 rename — 쓰는 중에 죽어도 기존 파일이 반쯤 잘리지 않는다.
   save(): void {
+    this.mergeWithDisk();
     this.state.reviews = this.state.reviews.slice(-MAX_REVIEWS);
     const keptReviewIds = new Set(this.state.reviews.map((review) => review.id));
     this.state.findings = this.state.findings.filter((finding) =>
