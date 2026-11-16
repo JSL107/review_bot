@@ -143,6 +143,7 @@ const parseConfig = (body: Record<string, unknown>): AppConfig => {
   });
   return {
     provider: body.provider,
+    fallback: bool(body.fallback, true),
     modelName: typeof body.modelName === 'string' ? body.modelName.trim() : '',
     sweepIntervalMin: intIn(body.sweepIntervalMin, '스윕 주기(분)', 1, 1440),
     harvestIntervalMin: intIn(body.harvestIntervalMin, '수확 주기(분)', 1, 1440),
@@ -280,14 +281,20 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
       throw new HttpError(404, '미리 볼 리뷰가 없습니다.');
     }
     const snapshot = await fetchConsistentSnapshot({ repo: record.repo, number: record.number });
+    // 실제 게시와 같은 기준으로 이미 올린 의견을 뺀다.
+    store.markDuplicates(record);
+    const all = store.findingsOf(record.id);
+    const fresh = all.filter((finding) => finding.status !== 'DUPLICATE');
     const plan = planPublication({
       detail: snapshot.detail,
       diff: snapshot.diff,
-      review: { ...record.review, findings: store.findingsOf(record.id) },
+      review: { ...record.review, findings: fresh },
       inlineMax: store.state.config.inlineMax,
     });
     sendJson(response, 200, {
       stale: snapshot.detail.headSha !== record.headSha,
+      duplicateCount: all.length - fresh.length,
+      nothingNew: fresh.length === 0 && store.hasPublishedReview(record),
       headSha: snapshot.detail.headSha,
       body: plan.payload.body,
       comments: plan.payload.comments.map(({ path, line, body }) => ({ path, line, body })),

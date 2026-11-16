@@ -1,4 +1,5 @@
 import { loadCompanionSpecs, renderCompanionSpecs } from './companion-tests.js';
+import { PROVIDER_LABEL, withFallback } from './fallback.js';
 import {
   createReview,
   fetchConsistentSnapshot,
@@ -31,6 +32,8 @@ export interface RunReviewInput {
   instruction?: string;
   // 지정하면 리뷰 직후 게시한다.
   publish?: { inlineMax: number };
+  // 고른 AI 가 실패하면 다른 AI 로 한 번 더(제한 시간 초과 제외). 기본은 설정값.
+  fallback?: boolean;
   // 스윕이 목록에서 본 head. 조회 전에 실패해도 이 커밋의 실패로 세어 같은 커밋을 무한히 다시 잡지 않게 한다.
   headShaHint?: string;
   onProgress?: (message: string) => void;
@@ -53,6 +56,7 @@ export const runReview = async ({
   timeoutMs,
   instruction,
   publish,
+  fallback,
   headShaHint,
   onProgress,
 }: RunReviewInput): Promise<RunReviewOutput> => {
@@ -91,18 +95,40 @@ export const runReview = async ({
       `AI 가 코드를 읽고 있어요.${rules.used.length > 0 ? ` 저장소 규칙(${rules.used.join(', ')})을 함께 봐요.` : ''}${learned.categories.length > 0 ? ' 전에 틀렸던 의견도 기억하고 있어요.' : ''}`,
     );
     // 규약은 diff 뒤에 붙인다 — "지적하지 말라" 류는 diff 를 다 읽은 뒤 마지막에 있어야 덜 묻힌다.
-    const completion = await complete({
-      prompt: buildReviewPrompt({ detail, diff, instruction }) + renderCompanionSpecs(companionSpecs) + rules.block + learned.block,
-      systemPrompt: CODE_REVIEWER_SYSTEM_PROMPT,
-      options: { provider, model: modelName || undefined, timeoutMs },
+    const prompt = buildReviewPrompt({ detail, diff, instruction }) + renderCompanionSpecs(companionSpecs) + rules.block + learned.block;
+    // 호출과 해석을 한 시도로 묶는다 — 응답 형식이 깨진 것도 다른 AI 로 넘길 사유다.
+    const outcome = await withFallback({
+      primary: provider,
+      enabled: fallback ?? store.state.config.fallback,
+      attempt: async (current) => {
+        const completion = await complete({
+          prompt,
+          systemPrompt: CODE_REVIEWER_SYSTEM_PROMPT,
+          // 세부 모델 이름은 처음 고른 AI 의 것이라, 다른 AI 로 넘어가면 그 AI 의 기본 모델을 쓴다.
+          options: { provider: current, model: current === provider ? modelName || undefined : undefined, timeoutMs },
+        });
+        const review = parsePullRequestReview(completion.text, (message) =>
+          store.log('warn', `${ref.repo}#${ref.number} 판정 보정: ${message}`),
+        );
+        return { completion, review };
+      },
+      onSwitch: (next, error) => {
+        store.log('warn', `${ref.repo}#${ref.number} ${PROVIDER_LABEL[provider]} 리뷰에 실패해서 ${PROVIDER_LABEL[next]} 로 다시 리뷰해요: ${errorMessage(error).split('\n')[0]}`);
+        progress(`${PROVIDER_LABEL[provider]} 가 실패해서 ${PROVIDER_LABEL[next]} 로 다시 읽고 있어요.`);
+      },
     });
-    record.review = parsePullRequestReview(completion.text, (message) =>
-      store.log('warn', `${ref.repo}#${ref.number} 판정 보정: ${message}`),
-    );
-    record.modelUsed = completion.modelUsed;
+    record.review = outcome.result.review;
+    record.modelUsed = outcome.result.completion.modelUsed;
+    if (outcome.fellBack) {
+      record.fallbackFrom = provider;
+    }
     record.status = 'done';
     record.finishedAt = new Date().toISOString();
     store.addFindings(record, record.review.findings);
+    const duplicates = store.markDuplicates(record);
+    if (duplicates > 0) {
+      store.log('info', `${ref.repo}#${ref.number} 의견 ${duplicates}개는 이 PR 에 이미 올린 것과 같아서 다시 올리지 않아요.`);
+    }
     store.log(
       'info',
       record.review.findings.length > 0 ? `${ref.repo}#${ref.number} 리뷰를 마쳤어요. 의견 ${record.review.findings.length}개.` : `${ref.repo}#${ref.number} 리뷰를 마쳤어요. 고칠 것이 없어요.`,
@@ -140,7 +166,7 @@ export const publishReview = async ({
   snapshot?: PullRequestSnapshot;
   inlineMax: number;
   onProgress?: (message: string) => void;
-}): Promise<void> => {
+}): Promise<'posted' | 'nothing-new'> => {
   const progress = onProgress ?? ((): void => {});
   if (record.review === undefined) {
     throw new ReviewError('완료되지 않은 리뷰는 게시할 수 없습니다.');
@@ -156,7 +182,16 @@ export const publishReview = async ({
     );
   }
 
-  const findings = store.findingsOf(record.id);
+  // 리뷰 뒤에 다른 리뷰가 올라갔을 수 있어 올리기 직전에 한 번 더 거른다.
+  store.markDuplicates(record);
+  const findings = store.findingsOf(record.id).filter((finding) => finding.status !== 'DUPLICATE');
+  // 새 의견이 없는데 이 PR 에 이미 올린 리뷰가 있으면 올리지 않는다 — 같은 요약이 커밋마다 쌓인다.
+  if (findings.length === 0 && store.hasPublishedReview(record)) {
+    record.nothingNew = true;
+    store.log('info', `${ref.repo}#${ref.number} 새 의견이 없어서 올리지 않았어요.`);
+    store.save();
+    return 'nothing-new';
+  }
   const review = { ...record.review, findings };
   let plan = planPublication({ detail: current.detail, diff: current.diff, review, inlineMax });
   progress('GitHub 에 리뷰를 올리는 중이에요.');
@@ -173,6 +208,9 @@ export const publishReview = async ({
     created = await createReview(ref, plan.payload);
   }
   record.published = { at: new Date().toISOString(), url: created.url, reviewId: created.reviewId };
+  for (const finding of [...plan.inlineFindings, ...plan.bodyFindings] as FindingRecord[]) {
+    finding.posted = true;
+  }
 
   if (plan.inlineCount > 0) {
     try {
@@ -193,4 +231,5 @@ export const publishReview = async ({
   }
   store.log('info', `${ref.repo}#${ref.number} 에 리뷰를 올렸어요.`);
   store.save();
+  return 'posted';
 };

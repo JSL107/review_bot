@@ -83,6 +83,8 @@ export interface PublicationPlan {
   payload: CreateReviewPayload;
   // payload.comments 와 같은 순서의 원본 지적 (같은 객체 참조) — 게시 후 코멘트 id 를 잇는 데 쓴다.
   inlineFindings: ReviewFinding[];
+  // 줄에 못 붙여 요약 목록으로 올리는 지적 (같은 객체 참조).
+  bodyFindings: ReviewFinding[];
   inlineCount: number;
   // 줄에 못 붙여 본문 목록으로 내린 지적.
   bodyCount: number;
@@ -168,6 +170,7 @@ export const planPublication = ({
       comments,
     },
     inlineFindings,
+    bodyFindings,
     inlineCount: comments.length,
     bodyCount: bodyFindings.length,
     droppedCount,

@@ -141,6 +141,7 @@ describe('레포 규칙', () => {
     const md = '# A\n빌드 명령\n## Code Review Rules\n- 규칙 1\n### 세부\n- 규칙 2\n## 다른 절\n무관';
     assert.equal(extractReviewSection(md), '## Code Review Rules\n- 규칙 1\n### 세부\n- 규칙 2');
     assert.equal(extractReviewSection('# 없음'), null);
+    assert.equal(extractReviewSection('# AGENTS.md\n## Stack\nNest\n## Review Focus\n- 권한 검사 누락을 본다\n## Safety\n무관'), '## Review Focus\n- 권한 검사 누락을 본다');
   });
   it('설정 규약을 앞에, 실린 출처를 돌려준다', () => {
     const rules = renderRepoRules([{ path: 'AGENTS.md', content: '규칙' }], '손 규약');

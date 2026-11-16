@@ -10,7 +10,9 @@ import { RepoConfig } from './store.js';
 export const RULES_MAX_BYTES = 16_000;
 export const RULES_FILE_MAX_BYTES = 8_000;
 
-const REVIEW_SECTION_HEADING = /^(#{1,3})\s*(code\s*review(\s*rules)?|review\s*rules|리뷰\s*(규칙|규약|지침|가이드))\s*$/im;
+// 제목에 review·리뷰가 들어가면 리뷰용 섹션이다(`## Code Review Rules`, `## Review Focus`, `## 리뷰 규칙` 등).
+// 여러 개면 처음 것을 쓴다. `## Code Review Rules` 는 GitHub 의 Codex 자동 리뷰도 찾는 제목이라 이 이름을 권한다.
+const REVIEW_SECTION_HEADING = /^(#{1,3})[^\S\n]*([^\n]*(?:review|리뷰)[^\n]*)$/im;
 
 // 리뷰용 섹션이 있으면 그 헤딩부터 같은 수준 이상의 다음 헤딩 전까지.
 export const extractReviewSection = (markdown: string): string | null => {

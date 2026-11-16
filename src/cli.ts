@@ -26,6 +26,7 @@ const HELP = `pr-review — codex / claude CLI 로 GitHub PR 을 리뷰한다
   -c, --comment                 결과를 PR 리뷰 코멘트로 게시 (게시 전 확인)
       --no-comment              터미널에만 출력
   -y, --yes                     게시 확인을 건너뛴다 (비대화형에서 게시하려면 필수)
+      --no-fallback             고른 AI 가 실패해도 다른 AI 로 넘기지 않음 (기본: 설정값, 처음엔 켜짐)
       --inline-max <n>          게시할 지적 상한 (기본 ${DEFAULT_INLINE_MAX})
   -i, --instruction <문장>      이번 리뷰에 덧붙일 지시 (예: "보안 위주로")
       --timeout <초>            모델 호출 제한 시간 (기본 600)
@@ -90,6 +91,7 @@ const main = async (): Promise<void> => {
     options: {
       model: { type: 'string', short: 'm' },
       'model-name': { type: 'string' },
+      fallback: { type: 'boolean' },
       comment: { type: 'boolean', short: 'c' },
       yes: { type: 'boolean', short: 'y' },
       'inline-max': { type: 'string' },
@@ -154,6 +156,7 @@ const main = async (): Promise<void> => {
     modelName: values['model-name'],
     timeoutMs,
     instruction: values.instruction,
+    fallback: values.fallback,
     onProgress: log,
   });
   const { detail, diff } = snapshot;
@@ -186,8 +189,8 @@ const main = async (): Promise<void> => {
       return;
     }
   }
-  await publishReview({ store, record, snapshot, inlineMax, onProgress: log });
-  log(`게시 완료: ${record.published?.url ?? ''}`);
+  const result = await publishReview({ store, record, snapshot, inlineMax, onProgress: log });
+  log(result === 'posted' ? `게시 완료: ${record.published?.url ?? ''}` : '새 의견이 없어서 올리지 않았어요. 이 PR 에 이미 올린 의견과 같아요.');
 };
 
 main().catch((error: unknown) => {
