@@ -42,13 +42,13 @@ const TICK_MS = 30_000;
 const describe = (job: Job): string => {
   switch (job.kind) {
     case 'review':
-      return `리뷰 ${job.ref.repo}#${job.ref.number}${job.publish ? ' (게시)' : ''}`;
+      return `${job.ref.repo}#${job.ref.number} 리뷰${job.publish ? '하고 바로 올리기' : ''}`;
     case 'publish':
-      return `게시 ${job.reviewId.slice(0, 8)}`;
+      return '리뷰 결과 올리기';
     case 'sweep':
-      return '스윕';
+      return '새 PR 확인';
     case 'harvest':
-      return '수확';
+      return '반응 확인';
   }
 };
 
@@ -139,7 +139,7 @@ export class Daemon {
       } catch (error: unknown) {
         // runReview 는 스스로 기록을 남긴다. 나머지만 여기서 남긴다.
         if (job.kind !== 'review') {
-          this.store.log('error', `${describe(job)} 실패: ${errorMessage(error)}`);
+          this.store.log('error', `${describe(job)}에 실패했어요: ${errorMessage(error)}`);
           this.store.save();
         }
       } finally {
@@ -193,7 +193,7 @@ export class Daemon {
         const result = await harvest(this.store);
         this.store.log(
           'info',
-          `수확 — PR ${result.pulls}개 · 코멘트 ${result.checked}건 확인 · ${result.changed}건 갱신${result.failed > 0 ? ` · 실패 ${result.failed}` : ''}`,
+          `반응 확인: 의견 ${result.checked}개를 살펴 ${result.changed}개가 바뀌었어요.${result.failed > 0 ? ` PR ${result.failed}개는 확인하지 못했어요.` : ''}`,
         );
         this.store.save();
         return;
@@ -211,7 +211,7 @@ export class Daemon {
       try {
         pulls = await listOpenPullRequests(repoConfig.repo, repoConfig.target);
       } catch (error: unknown) {
-        this.store.log('warn', `${repoConfig.repo} PR 목록 조회 실패: ${errorMessage(error)}`);
+        this.store.log('warn', `${repoConfig.repo} 의 PR 목록을 가져오지 못했어요: ${errorMessage(error)}`);
         continue;
       }
       for (const pull of pulls) {
@@ -243,7 +243,7 @@ export class Daemon {
         }
       }
     }
-    this.store.log('info', `스윕 — 레포 ${repos.length}개 확인, 새 리뷰 ${queued}건 대기열에 추가`);
+    this.store.log('info', queued > 0 ? `새 PR 확인: 저장소 ${repos.length}곳에서 리뷰할 PR ${queued}개를 찾았어요.` : `새 PR 확인: 저장소 ${repos.length}곳, 새로 리뷰할 PR 은 없어요.`);
     this.store.save();
   }
 }

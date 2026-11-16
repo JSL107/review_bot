@@ -6,252 +6,266 @@
 <title>review_bot</title>
 <style>
 :root {
-  --paper: #F1F3EE;
-  --sheet: #FBFCF9;
-  --ink: #1E2622;
-  --ink-soft: #55605A;
-  --rule: #D6DBD2;
-  --marker: #F4D35E;
-  --marker-soft: #F8E7A3;
-  --ok: #2F7A55;
-  --bad: #A8343F;
-  --bad-soft: #F6E3E3;
-  --test: #8A5A0F;
-  --on-marker: #1E2622;
-  --font: "Apple SD Gothic Neo", "Pretendard", -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
-  --serif: "Iowan Old Style", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --paper: #F2F3EF;
+  --surface: #FAFBF8;
+  --ink: #1C2420;
+  --ink-2: #57605A;
+  --line: #D8DCD4;
+  --marker: #F2CF4A;
+  --marker-weak: #F7E8A8;
+  --on-marker: #1C2420;
+  --good: #2E7650;
+  --danger: #A3303B;
+  --danger-weak: #F6E4E4;
+  --caution: #8A5A0F;
+  --font: "Apple SD Gothic Neo", "Pretendard", -apple-system, "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #161B18; --sheet: #1D2420; --ink: #E4E9E4; --ink-soft: #9FAAA3; --rule: #2F3833;
-    --marker: #C9A93A; --marker-soft: #5A4C1C; --ok: #5DB88A; --bad: #E88A93; --bad-soft: #3A2226; --test: #E0AE5A;
+    --paper: #171C19; --surface: #1E2521; --ink: #E5EAE5; --ink-2: #A2ACA5; --line: #313A35;
+    --marker: #C7A63A; --marker-weak: #574A1D; --good: #62B98D; --danger: #EA8C95; --danger-weak: #3B2327; --caution: #E2B060;
   }
 }
 * { box-sizing: border-box; }
 html { background: var(--paper); }
-body { margin: 0; color: var(--ink); background: var(--paper); font: 15px/1.6 var(--font); font-variant-numeric: tabular-nums; }
+body { margin: 0; color: var(--ink); background: var(--paper); font: 16px/1.65 var(--font); word-break: keep-all; overflow-wrap: anywhere; }
 a { color: inherit; text-underline-offset: 3px; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.9em; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; }
-.skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--paper); padding: 6px 12px; border-radius: 6px; z-index: 30; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--paper); padding: 6px 12px; z-index: 30; }
 .skip:focus { left: 8px; }
+.hidden-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-/* ── 상단 막대: 탭과 "지금 상태" 를 모든 화면에서 보여 준다 ── */
-.top { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--ink); }
-.top-in { max-width: 1040px; margin: 0 auto; padding: 0 24px; display: flex; align-items: stretch; gap: 8px 24px; flex-wrap: wrap; }
-.brand { font: 800 19px/1 var(--serif); letter-spacing: -0.01em; margin: 0; padding: 16px 0; display: flex; align-items: center; }
-nav { display: flex; gap: 2px; flex: 1; min-width: 0; }
-nav button { background: none; border: 0; padding: 0 14px; min-height: 48px; cursor: pointer; font-size: 15px; color: var(--ink-soft); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+/* 상단: 이름, 화면 이동, 지금 상태 */
+.top { position: sticky; top: 0; z-index: 5; background: var(--paper); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 980px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 4px 28px; flex-wrap: wrap; }
+.brand { font-weight: 800; font-size: 18px; letter-spacing: -0.02em; margin: 0; }
+nav { display: flex; gap: 4px; flex: 1; min-width: 0; }
+nav button { background: none; border: 0; padding: 14px 10px 12px; cursor: pointer; font-size: 15px; color: var(--ink-2); border-bottom: 3px solid transparent; white-space: nowrap; }
 nav button:hover { color: var(--ink); }
 nav button[aria-current="page"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--marker); }
-.count { display: inline-block; min-width: 20px; text-align: center; font-size: 12px; font-weight: 700; background: var(--marker); color: var(--on-marker); border-radius: 10px; padding: 0 6px; margin-left: 4px; line-height: 20px; }
+.count { font-size: 13px; font-weight: 700; margin-left: 5px; padding: 0 5px; background: var(--marker); color: var(--on-marker); border-radius: 3px; }
 .count:empty { display: none; }
-.pill { align-self: center; font-size: 13px; color: var(--ink-soft); text-decoration: none; border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 4px 12px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.pill:hover { border-color: var(--ink); }
+.now-state { font-size: 14px; color: var(--ink-2); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 7px; vertical-align: 1px; }
+.dot.busy { background: var(--marker); }
+.dot.off { background: var(--ink-2); }
+@media (prefers-reduced-motion: no-preference) { .dot.busy { animation: blink 1.4s ease-in-out infinite; } }
+@keyframes blink { 50% { opacity: .3; } }
 
-main { max-width: 1040px; margin: 0 auto; padding: 28px 24px 120px; }
+main { max-width: 980px; margin: 0 auto; padding: 36px 24px 140px; }
 main:focus { outline: none; }
-h1 { font: 700 28px/1.25 var(--serif); letter-spacing: -0.01em; margin: 0 0 6px; }
-h2 { font-size: 17px; margin: 36px 0 12px; display: flex; align-items: baseline; gap: 8px; }
-h2 .sub { font-size: 13px; font-weight: 400; color: var(--ink-soft); }
-h3 { font-size: 15px; margin: 20px 0 8px; }
-.lede { color: var(--ink-soft); margin: 0 0 20px; max-width: 70ch; }
-.muted { color: var(--ink-soft); }
-.small { font-size: 13px; }
+h1 { font-size: 26px; line-height: 1.3; letter-spacing: -0.02em; margin: 0 0 8px; }
+h2 { font-size: 19px; letter-spacing: -0.01em; margin: 44px 0 6px; }
+h3 { font-size: 16px; margin: 22px 0 6px; }
+.lede { color: var(--ink-2); margin: 0 0 22px; max-width: 62ch; }
+.section-note { color: var(--ink-2); margin: 0 0 14px; max-width: 62ch; font-size: 15px; }
+.muted { color: var(--ink-2); }
+.small { font-size: 14px; }
 
-.btn { border: 1px solid var(--ink); background: var(--sheet); padding: 6px 14px; min-height: 36px; border-radius: 6px; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; }
-.btn.primary { background: var(--ink); color: var(--paper); }
-.btn.ghost { border-color: var(--rule); }
-.btn.ghost:hover { border-color: var(--ink); }
-.btn:disabled { opacity: .5; cursor: default; }
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0; }
+/* 이 페이지의 단 하나의 강조: 형광펜 */
+.hl { background: linear-gradient(transparent 52%, var(--marker) 52%); padding: 0 2px; }
 
-/* ── 시작하기 ── */
-.onboard { border: 2px solid var(--ink); border-radius: 10px; padding: 20px 24px; margin: 0 0 28px; background: var(--sheet); }
-.onboard h2 { margin: 0 0 4px; font: 700 20px/1.3 var(--serif); }
-.steps { list-style: none; padding: 0; margin: 14px 0 0; counter-reset: step; }
-.steps > li { counter-increment: step; display: grid; grid-template-columns: 32px 1fr; gap: 0 12px; padding: 14px 0; border-top: 1px dotted var(--rule); }
-.steps > li::before { content: counter(step); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
-.steps > li.done::before { content: "✓"; background: var(--ok); border-color: var(--ok); color: var(--sheet); }
-.steps > li.now::before { background: var(--marker); color: var(--on-marker); }
-.steps > li.wait { opacity: .6; }
-.steps strong { display: block; }
-.steps .btn-row { margin-top: 8px; }
+.btn { border: 1.5px solid var(--ink); background: transparent; padding: 7px 16px; min-height: 40px; border-radius: 6px; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; font-weight: 600; font-size: 15px; }
+.btn:hover { background: var(--surface); }
+.btn.main { background: var(--ink); color: var(--paper); }
+.btn.main:hover { background: var(--ink); opacity: .88; }
+.btn.quiet { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; padding: 7px 6px; font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: default; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 12px 0 0; }
 
-.checks { list-style: none; padding: 0; margin: 8px 0 0; }
-.checks li { display: grid; grid-template-columns: 20px 1fr; gap: 0 8px; padding: 4px 0; font-size: 14px; }
-.checks .ok { color: var(--ok); } .checks .warn { color: var(--test); } .checks .fail { color: var(--bad); }
-.checks .lbl { font-weight: 600; }
-.fix { display: block; color: var(--ink-soft); font-size: 13px; }
+/* 홈 맨 위 한 문장 */
+.headline { font-size: 30px; line-height: 1.35; font-weight: 700; letter-spacing: -0.025em; margin: 0 0 8px; max-width: 24em; }
+.headline-sub { color: var(--ink-2); margin: 0 0 8px; }
+.notice { border-left: 4px solid var(--caution); padding: 10px 0 10px 16px; margin: 20px 0 0; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+.notice p { margin: 0; flex: 1 1 320px; }
+.notice.bad { border-left-color: var(--danger); }
 
-/* ── 지금 처리할 것 ── */
-.todo { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ink); border-radius: 10px; background: var(--sheet); overflow: hidden; }
-.todo > li { display: grid; grid-template-columns: 96px 1fr auto; gap: 4px 16px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--rule); }
-.todo > li:first-child { border-top: 0; }
-.todo .what { min-width: 0; }
-.todo .what b { font-weight: 600; display: block; overflow-wrap: anywhere; }
-.todo .what .small { display: block; overflow-wrap: anywhere; }
-.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-align: center; white-space: nowrap; border: 1px solid var(--rule); }
-.tag.run { background: var(--marker-soft); border-color: var(--marker); color: var(--ink); }
-.tag.judge { background: var(--marker); border-color: var(--marker); color: var(--on-marker); }
-.tag.fail { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
-.tag.post { border-color: var(--ink); color: var(--ink); }
-.todo-empty { border: 1px dashed var(--rule); border-radius: 10px; padding: 20px; color: var(--ink-soft); background: var(--sheet); }
-.todo-empty strong { color: var(--ink); display: block; }
-.pausebar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; border: 1px solid var(--test); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; background: var(--sheet); }
-.pausebar strong { color: var(--test); }
-.alert { border: 1px solid var(--bad); background: var(--bad-soft); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+/* 처음 쓰는 사람: 실제 순서가 있는 단계라 번호를 붙인다 */
+.firstrun { margin: 32px 0 0; padding: 24px 0 4px; border-top: 2px solid var(--ink); }
+.firstrun h2 { margin-top: 0; }
+.steps { list-style: none; padding: 0; margin: 10px 0 0; counter-reset: step; }
+.steps > li { counter-increment: step; display: grid; grid-template-columns: 40px 1fr; gap: 0 14px; padding: 18px 0; border-top: 1px solid var(--line); }
+.steps > li:first-child { border-top: 0; }
+.steps > li::before { content: counter(step); width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink-2); color: var(--ink-2); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.steps > li.done::before { content: "✓"; border-color: var(--good); background: var(--good); color: var(--surface); }
+.steps > li.now::before { border-color: var(--ink); background: var(--marker); color: var(--on-marker); }
+.steps > li.later { color: var(--ink-2); }
+.steps .title { font-weight: 700; display: block; margin-bottom: 2px; }
 
-.pulse { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); margin-right: 6px; vertical-align: 1px; }
-.pulse.busy { background: var(--marker); box-shadow: 0 0 0 3px var(--marker-soft); }
-.pulse.off { background: var(--ink-soft); }
-@media (prefers-reduced-motion: no-preference) { .pulse.busy { animation: blink 1.4s ease-in-out infinite; } }
-@keyframes blink { 50% { opacity: .35; } }
+.checks { list-style: none; padding: 0; margin: 10px 0 0; }
+.checks li { padding: 6px 0; }
+.checks .mark-ok { color: var(--good); font-weight: 700; margin-right: 8px; }
+.checks .mark-warn { color: var(--caution); font-weight: 700; margin-right: 8px; }
+.checks .mark-fail { color: var(--danger); font-weight: 700; margin-right: 8px; }
+.checks .name { font-weight: 600; margin-right: 6px; }
+.checks .fix { display: block; margin: 2px 0 0 22px; color: var(--ink-2); font-size: 14px; }
 
-.auto { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
-.auto .muted { flex: 1 1 260px; }
+/* 확인할 것 목록: 상자 대신 줄 */
+.todo { list-style: none; margin: 8px 0 0; padding: 0; border-top: 2px solid var(--ink); }
+.todo > li { display: grid; grid-template-columns: 110px 1fr auto; gap: 4px 20px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.kind { font-size: 14px; font-weight: 700; }
+.kind.ask { color: var(--on-marker); }
+.kind.ask span { background: linear-gradient(transparent 50%, var(--marker) 50%); }
+.kind.fail { color: var(--danger); }
+.kind.run { color: var(--caution); }
+.todo .what b { display: block; font-weight: 600; }
+.todo .what .muted { display: block; font-size: 14px; }
+.calm { margin: 10px 0 0; padding: 18px 0; border-top: 2px solid var(--ink); color: var(--ink-2); }
 
-/* ── 레포별 현황 (표 대신 줄 — 좁은 화면에서도 접히지 않고 줄바꿈된다) ── */
-.repos { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
-.repos > li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr); gap: 4px 20px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
-.repos .name { font-weight: 600; overflow-wrap: anywhere; }
-.nums { display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 14px; }
-.nums span b { font-weight: 700; }
-.rate { font: 700 18px/1 var(--serif); }
-.empty { padding: 20px; border: 1px dashed var(--rule); border-radius: 8px; color: var(--ink-soft); background: var(--sheet); }
+/* 저장소별 성적 */
+.scores { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.scores > li { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 20px; align-items: baseline; }
+.scores .repo { font-weight: 600; }
+.scores .pct { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.scores .line2 { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; }
+.chart-wrap { max-width: 520px; margin-top: 18px; }
+.legend { font-size: 14px; color: var(--ink-2); margin: 0 0 6px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin: 0 5px 0 0; vertical-align: -1px; }
+.legend i + span { margin-right: 14px; }
+svg text { fill: var(--ink-2); font: 11px var(--font); }
 
-.charts { display: grid; grid-template-columns: 3fr 2fr; gap: 28px; align-items: start; }
-.chart-cap { font-size: 13px; color: var(--ink-soft); margin: 4px 0 0; }
-.legend { display: flex; gap: 14px; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
-.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
-svg text { fill: var(--ink-soft); font: 11px var(--font); }
-.cat-row { display: grid; grid-template-columns: 76px 1fr 54px; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; }
-.cat-bar { height: 10px; display: flex; background: var(--rule); border-radius: 2px; overflow: hidden; }
-.cat-bar span { display: block; height: 100%; }
+details.more { margin-top: 28px; border-top: 1px solid var(--line); }
+details.more > summary { cursor: pointer; padding: 14px 0; font-weight: 600; color: var(--ink-2); }
+details.more > summary:hover { color: var(--ink); }
+.log { font-size: 14px; }
+.log p { margin: 0; padding: 6px 0; border-bottom: 1px dotted var(--line); }
+.log .warn { color: var(--caution); } .log .error { color: var(--danger); }
+.tech { font-size: 13px; color: var(--ink-2); }
+.tech dt { font-weight: 600; margin-top: 8px; }
+.tech dd { margin: 0; overflow-wrap: anywhere; }
 
-details.fold { border-top: 1px solid var(--rule); margin-top: 32px; }
-details.fold > summary { cursor: pointer; padding: 12px 0; font-weight: 700; font-size: 17px; }
-.log { font-size: 13px; }
-.log div { padding: 4px 0; border-bottom: 1px dotted var(--rule); }
-.log .warn { color: var(--test); } .log .error { color: var(--bad); }
+/* 리뷰 기록 */
+.direct { margin: 0 0 8px; }
+.direct-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; max-width: 720px; }
+.direct details { margin-top: 8px; font-size: 14px; }
+.direct details summary { cursor: pointer; color: var(--ink-2); }
+.direct .opts { display: grid; gap: 10px; padding: 10px 0 0; max-width: 720px; }
+.views { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 4px 0 14px; border-bottom: 1px solid var(--line); }
+.views button { background: none; border: 0; padding: 8px 0 7px; cursor: pointer; color: var(--ink-2); border-bottom: 3px solid transparent; margin-bottom: -1px; font-size: 15px; }
+.views button[aria-pressed="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
+.views .n { margin-left: 4px; font-size: 13px; }
+.filters { display: grid; grid-template-columns: 1fr 240px; gap: 10px; margin: 0 0 10px; }
+.result-count { font-size: 14px; color: var(--ink-2); margin: 0 0 4px; }
+.review { border-bottom: 1px solid var(--line); }
+.review > summary { list-style: none; cursor: pointer; padding: 16px 0; display: grid; grid-template-columns: 1fr auto; gap: 2px 20px; }
+.review > summary::-webkit-details-marker { display: none; }
+.review > summary:hover .rtitle { text-decoration: underline; text-underline-offset: 3px; }
+.review.needs > summary .rtitle::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--marker); border: 1px solid var(--ink-2); margin-right: 8px; vertical-align: 2px; }
+.review.failed > summary .rtitle::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); margin-right: 8px; vertical-align: 2px; }
+.rtitle { font-weight: 600; }
+.rnum { color: var(--ink-2); font-weight: 400; }
+.rmeta { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; }
+.rverdict { font-size: 15px; text-align: right; }
+.rverdict.high { color: var(--danger); font-weight: 700; }
+.rbody { padding: 0 0 24px; }
+.summary { border-left: 3px solid var(--marker); padding: 2px 0 2px 16px; margin: 0 0 18px; white-space: pre-line; max-width: 66ch; }
+.opinion { padding: 14px 0; border-top: 1px dotted var(--line); }
+.opinion-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.sev { font-weight: 700; font-size: 15px; }
+.sev.MUST_FIX { background: linear-gradient(transparent 52%, color-mix(in srgb, var(--danger) 32%, transparent) 52%); }
+.sev.MISSING_TEST { background: linear-gradient(transparent 52%, color-mix(in srgb, var(--caution) 34%, transparent) 52%); }
+.sev.NICE_TO_HAVE { background: linear-gradient(transparent 52%, var(--marker-weak) 52%); }
+.where { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+.said { margin-left: auto; font-size: 14px; color: var(--ink-2); }
+.said.ACCEPTED { color: var(--good); font-weight: 600; }
+.said.REJECTED { color: var(--danger); font-weight: 600; }
+.said.NEEDS_JUDGE { color: var(--on-marker); font-weight: 600; background: var(--marker-weak); padding: 0 4px; }
+.opinion p { margin: 6px 0 0; white-space: pre-wrap; max-width: 70ch; }
+.error-text { color: var(--danger); white-space: pre-wrap; font-size: 14px; }
 
-/* 심각도는 형광펜 줄로 긋는다 — 이 페이지에서 유일하게 튀는 표현 */
-.mark { padding: 0 3px; font-weight: 700; white-space: nowrap; }
-.mark.MUST_FIX { background: linear-gradient(transparent 50%, color-mix(in srgb, var(--bad) 35%, transparent) 50%); }
-.mark.MISSING_TEST { background: linear-gradient(transparent 50%, color-mix(in srgb, var(--test) 40%, transparent) 50%); }
-.mark.NICE_TO_HAVE { background: linear-gradient(transparent 50%, var(--marker-soft) 50%); }
-.st { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
-.st.ACCEPTED { color: var(--ok); font-weight: 600; }
-.st.REJECTED { color: var(--bad); font-weight: 600; }
-.st.NEEDS_JUDGE { background: var(--marker); color: var(--on-marker); padding: 0 4px; font-weight: 600; }
+/* 폼 */
+label { display: block; font-size: 14px; color: var(--ink-2); }
+label > input, label > select, label > textarea { display: block; width: 100%; margin-top: 5px; }
+input[type=text], input[type=number], input[type=search], select, textarea { border: 1.5px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 11px; min-height: 42px; font-size: 15px; }
+input:focus, select:focus, textarea:focus { border-color: var(--ink); }
+textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+.check { display: flex; align-items: flex-start; gap: 10px; color: var(--ink); font-size: 15px; cursor: pointer; }
+.check input { width: 19px; height: 19px; margin: 3px 0 0; flex: none; accent-color: var(--ink); }
+.check .hint { display: block; color: var(--ink-2); font-size: 14px; }
+.check.danger input { accent-color: var(--danger); }
+.choice { display: flex; flex-wrap: wrap; gap: 10px; }
+.choice label { display: flex; gap: 10px; align-items: center; border: 1.5px solid var(--line); border-radius: 6px; padding: 10px 16px; color: var(--ink); cursor: pointer; font-size: 15px; background: var(--surface); }
+.choice label:has(input:checked) { border-color: var(--ink); font-weight: 700; }
+.choice input { accent-color: var(--ink); width: 18px; height: 18px; margin: 0; }
 
-/* ── 리뷰 ── */
-.start { border: 1px solid var(--rule); background: var(--sheet); border-radius: 10px; padding: 14px 16px; }
-form.inline { display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; align-items: end; }
-.start .check { grid-column: 1 / -1; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.chip { border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px; padding: 4px 12px; min-height: 32px; cursor: pointer; font-size: 14px; }
-.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.chip .n { opacity: .75; margin-left: 4px; font-size: 12px; }
-.filters { display: grid; grid-template-columns: 1fr 200px; gap: 10px; margin: 0 0 12px; }
-.result-count { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
-.review { border-top: 1px solid var(--rule); border-left: 4px solid transparent; }
-.review:last-child { border-bottom: 1px solid var(--rule); }
-.review.needs { border-left-color: var(--marker); background: color-mix(in srgb, var(--marker-soft) 22%, transparent); }
-.review.failed { border-left-color: var(--bad); }
-.review summary { list-style: none; cursor: pointer; padding: 12px 8px; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; }
-.review summary::-webkit-details-marker { display: none; }
-.review summary:hover .review-title { text-decoration: underline; text-underline-offset: 3px; }
-.review-title { font-weight: 600; overflow-wrap: anywhere; }
-.review-meta { color: var(--ink-soft); font-size: 13px; grid-column: 1 / -1; overflow-wrap: anywhere; }
-.verdict { font-size: 14px; text-align: right; }
-.verdict.high { color: var(--bad); font-weight: 700; }
-.review-body { padding: 0 8px 20px; }
-.summary-quote { border-left: 3px solid var(--marker); padding: 2px 0 2px 14px; margin: 0 0 16px; white-space: pre-line; max-width: 75ch; }
-.finding { padding: 10px 0; border-top: 1px dotted var(--rule); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
-.finding-text { white-space: pre-wrap; max-width: 78ch; grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; }
-.loc { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); overflow-wrap: anywhere; }
-.error-text { color: var(--bad); white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }
-.posted-by { font-size: 13px; }
+/* 봇이 배운 것 */
+.judge { padding: 18px 0; border-top: 1px solid var(--line); }
+.judge:first-of-type { border-top: 2px solid var(--ink); }
+.reply { white-space: pre-wrap; font-size: 15px; border-left: 3px solid var(--line); padding: 2px 0 2px 14px; margin: 10px 0; }
+.counter { font-size: 13px; color: var(--ink-2); margin: 4px 0 0; }
+.learned { list-style: none; margin: 6px 0 0; padding: 0; }
+.learned li { padding: 10px 0; border-bottom: 1px dotted var(--line); }
+.learned .what-kind { font-weight: 700; display: block; }
+.wrong { list-style: none; margin: 8px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.wrong > li { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px 22px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.wrong .label { display: block; font-size: 13px; color: var(--ink-2); }
+pre.block { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; font-size: 13px; max-height: 340px; overflow: auto; }
 
-/* ── 폼 ── */
-label { display: block; font-size: 13px; color: var(--ink-soft); }
-label > input, label > select, label > textarea { display: block; width: 100%; margin-top: 4px; }
-input[type=text], input[type=number], input[type=search], select, textarea { border: 1px solid var(--ink-soft); background: var(--sheet); border-radius: 6px; padding: 7px 10px; min-height: 36px; }
-textarea { min-height: 90px; resize: vertical; font-size: 13.5px; }
-.check { display: flex; align-items: flex-start; gap: 8px; color: var(--ink); font-size: 14px; }
-.check input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; }
-.check.danger { color: var(--bad); font-weight: 600; }
-.check.danger input { accent-color: var(--bad); }
-
-/* ── 학습 ── */
-.judge { border: 1px solid var(--rule); border-left: 4px solid var(--marker); border-radius: 6px; padding: 14px; margin-bottom: 12px; background: var(--sheet); }
-.reply { white-space: pre-wrap; font-size: 13.5px; border-left: 2px solid var(--ink-soft); padding-left: 10px; margin: 8px 0; overflow-wrap: anywhere; }
-.counter { font-size: 12px; color: var(--ink-soft); margin: 4px 0 0; }
-pre.block { white-space: pre-wrap; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; font-size: 13px; max-height: 360px; overflow: auto; }
-.rej { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
-.rej > li { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px 20px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
-.rej .cell { min-width: 0; overflow-wrap: anywhere; }
-
-/* ── 설정 ── */
-.settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: 14px 20px; margin-bottom: 8px; }
-.picker { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; max-width: 680px; margin: 8px 0 20px; }
-.repo-card { border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 10px; background: var(--sheet); }
-.repo-card[open] { border-color: var(--ink-soft); }
-.repo-card.dirty { border-left: 4px solid var(--marker); }
-.repo-card > summary { cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; list-style: none; }
+/* 설정 */
+.set-section { margin-top: 40px; }
+.set-section:first-of-type { margin-top: 8px; }
+.picker { display: grid; grid-template-columns: 1fr auto; gap: 8px; max-width: 600px; margin: 10px 0 6px; }
+.repo-card { border-top: 1px solid var(--line); }
+.repo-card:last-child { border-bottom: 1px solid var(--line); }
+.repo-card.changed { box-shadow: inset 4px 0 0 var(--marker); }
+.repo-card > summary { cursor: pointer; padding: 16px 0 16px 4px; list-style: none; display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 8px; align-items: baseline; }
+.repo-card.changed > summary { padding-left: 14px; }
 .repo-card > summary::-webkit-details-marker { display: none; }
-.repo-card > summary::before { content: "▸"; color: var(--ink-soft); }
-.repo-card[open] > summary::before { content: "▾"; }
-.repo-name { font-weight: 700; overflow-wrap: anywhere; }
-.badges { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-.badge { font-size: 12px; border: 1px solid var(--rule); border-radius: 4px; padding: 0 6px; color: var(--ink-soft); }
-.badge.danger { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); font-weight: 700; }
-.chg { font-size: 12px; background: var(--marker); color: var(--on-marker); border-radius: 4px; padding: 0 6px; font-weight: 700; }
-.chg[hidden] { display: none; }
-.repo-body { padding: 4px 16px 16px; border-top: 1px dotted var(--rule); }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 12px 20px; margin-top: 12px; }
-.danger-zone { border: 1.5px solid var(--bad); background: var(--bad-soft); border-radius: 8px; padding: 10px 14px; margin-top: 12px; }
-.danger-zone p { margin: 4px 0 0 26px; font-size: 13px; color: var(--ink-soft); }
-.savebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--sheet); border-top: 1px solid var(--ink); }
-.savebar-in { max-width: 1040px; margin: 0 auto; padding: 10px 24px; display: flex; gap: 8px 16px; align-items: center; flex-wrap: wrap; }
-.savebar .msg { flex: 1 1 200px; font-size: 14px; }
-.savebar .msg.dirty { font-weight: 700; }
-.savebar .msg.dirty::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--marker); border: 1px solid var(--ink); margin-right: 8px; }
+.repo-card > summary::before { content: "+"; color: var(--ink-2); font-weight: 700; }
+.repo-card[open] > summary::before { content: "−"; }
+.repo-card .rname { font-weight: 700; }
+.repo-card .rsay { grid-column: 2 / -1; font-size: 14px; color: var(--ink-2); }
+.repo-card .rsay .warn { color: var(--danger); font-weight: 600; }
+.changed-mark { font-size: 13px; font-weight: 700; background: var(--marker); color: var(--on-marker); padding: 0 6px; border-radius: 3px; }
+.changed-mark[hidden] { display: none; }
+.repo-body { padding: 4px 0 22px 30px; display: grid; gap: 16px; max-width: 760px; }
+.danger-zone { border: 1.5px solid var(--danger); background: var(--danger-weak); border-radius: 6px; padding: 12px 16px; }
+.danger-zone .check { color: var(--danger); font-weight: 700; }
+.danger-zone .hint { color: var(--ink-2); font-weight: 400; }
+.repo-body details summary, .set-section details summary { cursor: pointer; color: var(--ink-2); font-size: 15px; }
+.adv { display: grid; gap: 14px; padding-top: 12px; }
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 14px 22px; padding-top: 12px; max-width: 760px; }
+.savebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 2px solid var(--ink); }
+.savebar-in { max-width: 980px; margin: 0 auto; padding: 12px 24px; display: flex; gap: 10px 16px; align-items: center; flex-wrap: wrap; }
+.savebar .msg { flex: 1 1 220px; font-size: 15px; }
+.savebar .msg.changed { font-weight: 700; }
 
-dialog { border: 1px solid var(--ink); border-radius: 10px; padding: 0; width: min(860px, calc(100vw - 24px)); max-height: calc(100vh - 48px); background: var(--paper); color: var(--ink); }
+dialog { border: 1.5px solid var(--ink); border-radius: 8px; padding: 0; width: min(820px, calc(100vw - 24px)); max-height: calc(100vh - 48px); background: var(--paper); color: var(--ink); }
 dialog::backdrop { background: rgba(20, 26, 23, .55); }
-.dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); }
-.dialog-head h2 { margin: 0; font-size: 17px; }
-.dialog-body { padding: 16px 20px; overflow: auto; }
-.dialog-foot { padding: 12px 20px; border-top: 1px solid var(--rule); display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px 12px; position: sticky; bottom: 0; background: var(--paper); }
-.dialog-foot .note { margin-right: auto; font-size: 13px; color: var(--bad); }
-.preview-body { white-space: pre-wrap; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; font-size: 13.5px; overflow-wrap: anywhere; }
-.preview-comment { border-left: 3px solid var(--marker); padding: 4px 0 4px 12px; margin: 12px 0; }
-.preview-comment p { white-space: pre-wrap; margin: 4px 0 0; font-size: 13.5px; overflow-wrap: anywhere; }
-.warn-box { border: 1px solid var(--test); color: var(--test); border-radius: 6px; padding: 8px 12px; font-size: 14px; margin-bottom: 12px; }
+.dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--paper); }
+.dialog-head h2 { margin: 0; font-size: 18px; }
+.dialog-body { padding: 18px 22px; overflow: auto; }
+.dialog-body h3:first-child { margin-top: 0; }
+.dialog-foot { padding: 14px 22px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 8px 12px; position: sticky; bottom: 0; background: var(--paper); }
+.dialog-foot .note { margin-right: auto; font-size: 14px; color: var(--ink-2); }
+.preview-body { white-space: pre-wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; font-size: 14px; }
+.preview-comment { border-left: 3px solid var(--marker); padding: 4px 0 4px 14px; margin: 14px 0; }
+.preview-comment p { white-space: pre-wrap; margin: 4px 0 0; font-size: 14px; }
 
-.toast { position: fixed; bottom: 76px; right: 20px; background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 6px; font-size: 14px; max-width: min(420px, calc(100vw - 40px)); z-index: 40; }
+.empty { padding: 20px 0; color: var(--ink-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.toast { position: fixed; bottom: 84px; right: 20px; background: var(--ink); color: var(--paper); padding: 12px 18px; border-radius: 6px; font-size: 15px; max-width: min(440px, calc(100vw - 40px)); z-index: 40; }
 .toast[hidden] { display: none; }
 
-@media (max-width: 860px) { .charts { grid-template-columns: 1fr; } }
-@media (max-width: 640px) {
-  .top-in { padding: 0 12px; gap: 0 8px; }
-  .brand { padding: 12px 0 4px; flex: 1; }
+@media (max-width: 680px) {
+  .top-in { padding: 0 14px; gap: 0 12px; }
+  .brand { padding: 12px 0 0; flex: 1; }
   nav { flex-basis: 100%; order: 3; overflow-x: auto; }
-  nav button { padding: 0 12px; }
-  .pill { order: 2; margin: 8px 0 4px auto; }
-  main { padding: 18px 16px 120px; }
-  h1 { font-size: 24px; }
-  .review summary { grid-template-columns: 1fr; }
-  .verdict { text-align: left; }
+  nav button { padding: 12px 8px 10px; }
+  .now-state { order: 2; padding-top: 12px; }
+  main { padding: 24px 16px 140px; }
+  .headline { font-size: 24px; }
+  h1 { font-size: 23px; }
   .todo > li { grid-template-columns: 1fr; }
-  .todo .tag { justify-self: start; }
-  .repos > li, .rej > li { grid-template-columns: 1fr; }
-  form.inline, .filters, .picker { grid-template-columns: 1fr; }
+  .review > summary { grid-template-columns: 1fr; }
+  .rverdict { text-align: left; }
+  .wrong > li { grid-template-columns: 1fr; }
+  .filters, .direct-row, .picker { grid-template-columns: 1fr; }
+  .repo-body { padding-left: 0; }
   .savebar-in { padding: 10px 16px; }
+  .btn { min-height: 44px; }
   .toast { right: 12px; left: 12px; max-width: none; }
 }
 </style>
@@ -262,20 +276,20 @@ dialog::backdrop { background: rgba(20, 26, 23, .55); }
   <div class="top-in">
     <p class="brand">review_bot</p>
     <nav aria-label="화면">
-      <button data-tab="dashboard">대시보드<span class="count" id="count-todo" aria-label="처리할 것"></span></button>
-      <button data-tab="reviews">리뷰</button>
-      <button data-tab="learning">학습<span class="count" id="count-judge" aria-label="판정 필요"></span></button>
+      <button data-tab="dashboard">홈<span class="count" id="count-todo" aria-label="확인할 것"></span></button>
+      <button data-tab="reviews">리뷰 기록</button>
+      <button data-tab="learning">봇이 배운 것<span class="count" id="count-judge" aria-label="확인해 줄 의견"></span></button>
       <button data-tab="settings">설정</button>
     </nav>
-    <a class="pill" id="pill" href="#dashboard"></a>
+    <a class="now-state" id="now-state" href="#dashboard"></a>
   </div>
 </header>
 <main id="main" tabindex="-1"></main>
 
 <dialog id="preview" aria-labelledby="preview-title">
-  <div class="dialog-head"><h2 id="preview-title">게시 미리보기</h2><button class="btn ghost" data-close>닫기</button></div>
+  <div class="dialog-head"><h2 id="preview-title">올리기 전에 확인하기</h2><button class="btn quiet" data-close>닫기</button></div>
   <div class="dialog-body" id="preview-body"></div>
-  <div class="dialog-foot"><span class="note">게시하면 내 gh 계정 이름으로 PR 에 코멘트가 달립니다.</span><button class="btn ghost" data-close>취소</button><button class="btn primary" id="preview-publish">이 내용으로 게시</button></div>
+  <div class="dialog-foot"><span class="note">올리면 내 GitHub 계정 이름으로 PR 에 남아요.</span><button class="btn" data-close>그만두기</button><button class="btn main" id="preview-publish">이대로 올리기</button></div>
 </dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -289,19 +303,19 @@ let renderedTab = null;
 let settingsDraft = null; // 설정 탭은 편집 중 폴링으로 덮이지 않게 초안을 따로 든다.
 let settingsBase = null; // 저장된 값. 초안과 비교해 "저장 안 한 변경" 을 센다.
 const openReviews = new Set();
-const repoOpen = new Map(); // 설정 레포 카드의 펼침 상태. 기록이 없으면 레포가 적을 때만 펼친다.
-const reasonDrafts = new Map(); // 판정 사유를 입력 중일 때 폴링이 지우지 않게.
+const repoOpen = new Map(); // 설정 저장소 카드의 펼침 상태. 기록이 없으면 저장소가 적을 때만 펼친다.
+const reasonDrafts = new Map(); // 사유를 입력 중일 때 폴링이 지우지 않게.
 const filters = { q: '', repo: '', status: '' };
 
-const RISK = { low: '낮음', medium: '중간', high: '높음', unknown: '판단 보류' };
-const VERDICT = { approve: '승인 권장', request_changes: '수정 요청', comment: '의견만', undetermined: '판단 보류' };
-const SEVERITY = { MUST_FIX: '머지 전 필수', MISSING_TEST: '테스트 누락', NICE_TO_HAVE: '권장' };
+// 화면에 보이는 말. 내부 값(MUST_FIX 등)은 그대로 보여 주지 않는다.
+const SEVERITY = { MUST_FIX: '꼭 고칠 것', MISSING_TEST: '테스트가 빠짐', NICE_TO_HAVE: '고치면 좋은 것' };
 // 게시 순서(publish.ts sortBySeverity)와 같게 — sort 는 안정 정렬이라 같은 심각도는 모델 순서를 지킨다.
 const SEVERITY_ORDER = { MUST_FIX: 0, MISSING_TEST: 1, NICE_TO_HAVE: 2 };
-const CATEGORY = { CORRECTNESS: '정확성', SECURITY: '보안', RELIABILITY: '안정성', TEST: '테스트', ARCHITECTURE: '구조', READABILITY: '가독성', STYLE: '스타일', UNCLASSIFIED: '미분류' };
-const STATUS = { NOT_POSTED: '미게시', OPEN: '반응 없음', ACCEPTED: '채택', REJECTED: '기각', NEEDS_JUDGE: '판정 필요', STALE: '반응 없이 닫힘' };
-const TRIGGER = { sweep: '자동', manual: '페이지', cli: 'CLI' };
-const TARGET = { all: '열린 PR 전부', 'review-requested': '나에게 리뷰 요청된 PR', mine: '내가 올린 PR' };
+const CATEGORY = { CORRECTNESS: '동작 오류', SECURITY: '보안', RELIABILITY: '장애 대비', TEST: '테스트', ARCHITECTURE: '구조', READABILITY: '읽기 쉬움', STYLE: '코드 모양', UNCLASSIFIED: '기타' };
+const SAID = { NOT_POSTED: '아직 안 올림', OPEN: '반응 기다리는 중', ACCEPTED: '맞다고 함', REJECTED: '틀렸다고 함', NEEDS_JUDGE: '확인 필요', STALE: '반응 없이 끝남' };
+const VERDICT = { request_changes: '꼭 고칠 것이 있어요', comment: '고치면 좋은 것이 있어요', approve: '문제를 찾지 못했어요', undetermined: '판단하기 어려웠어요' };
+const TRIGGER = { sweep: '자동으로', manual: '직접', cli: '터미널에서' };
+const TARGET = { all: '열린 PR 전부', 'review-requested': '나에게 리뷰를 부탁한 PR 만', mine: '내가 올린 PR 만' };
 const DEFAULT_RULES = ['AGENTS.md', 'CLAUDE.md', 'CODE_RULES.md', '.github/copilot-instructions.md', 'REVIEW.md'];
 const REASON_MIN = 40;
 const TODO_PREVIEW = 6;
@@ -320,21 +334,25 @@ const ago = (iso) => {
   return `${Math.floor(s / 86400)}일 전`;
 };
 const until = (iso) => {
-  if (!iso) return '멈춤';
+  if (!iso) return '';
   const s = Math.round((Date.parse(iso) - Date.now()) / 1000);
   return s <= 0 ? '곧' : s < 3600 ? `${Math.ceil(s / 60)}분 뒤` : `${Math.round(s / 3600)}시간 뒤`;
 };
-const elapsed = (iso) => {
-  if (!iso) return '';
-  const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
-  return s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`;
-};
-const duration = (review) => {
-  if (!review.finishedAt) return '';
-  const s = Math.round((Date.parse(review.finishedAt) - Date.parse(review.createdAt)) / 1000);
-  return s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`;
-};
+const seconds = (s) => (s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`);
+const elapsed = (iso) => (iso ? seconds(Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000))) : '');
+const duration = (review) => (review.finishedAt ? seconds(Math.round((Date.parse(review.finishedAt) - Date.parse(review.createdAt)) / 1000)) : '');
 const firstLine = (text) => String(text ?? '').split('\n')[0];
+const prName = (review) => `${esc(review.repo)} <span class="rnum">#${Number(review.number)}</span>`;
+
+// 실패 원문은 개발자용이다. 흔한 원인은 할 일로 바꿔 보여 준다.
+const explainError = (message) => {
+  const text = String(message ?? '');
+  if (/stderr 없음|인증|login|쿼터|quota|빈 응답/i.test(text)) return 'AI 로그인이 풀렸거나 이번 달 사용량을 다 쓴 것 같아요. 시작하기.command 를 다시 열어 로그인을 확인해 주세요.';
+  if (/끝나지 않았습니다|timeout/i.test(text)) return 'AI 가 제한 시간 안에 답하지 못했어요. PR 이 크면 생길 수 있어요. 다시 리뷰해 보세요.';
+  if (/gh .*실패|HTTP 40[134]|Not Found/i.test(text)) return 'GitHub 에서 PR 을 가져오지 못했어요. 이 저장소에 접근할 수 있는 계정인지 확인해 주세요.';
+  if (/push 가 이어지고/.test(text)) return '리뷰하는 동안 PR 에 새 변경이 계속 올라왔어요. 잠시 뒤 다시 리뷰해 보세요.';
+  return '리뷰 중 문제가 생겼어요. 아래 원문을 개발자에게 보여 주면 원인을 찾을 수 있어요.';
+};
 
 const toast = (message) => {
   const el = document.getElementById('toast');
@@ -351,11 +369,11 @@ const api = async (method, path, body) => {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `요청 실패 (${response.status})`);
+  if (!response.ok) throw new Error(data.error || `요청이 실패했어요 (${response.status})`);
   return data;
 };
 
-// 같은 HTML 이면 건드리지 않고, 바꿀 때도 포커스 위치를 같은 순서의 요소로 되돌린다 — 4초 폴링이 키보드 사용자를 튕기지 않게.
+// 같은 HTML 이면 건드리지 않고, 바꿀 때도 포커스를 같은 요소로 되돌린다 — 4초 폴링이 키보드 사용자를 튕기지 않게.
 // 목록이 늘거나 줄면 순번은 다른 버튼을 가리킨다 — 식별자로 같은 요소를 먼저 찾는다.
 const focusKey = (node) => {
   if (node.id) return `#${CSS.escape(node.id)}`;
@@ -385,8 +403,8 @@ const refresh = async () => {
     render();
   } catch {
     // 한 번 받은 화면은 그대로 둔다 — 갈아끼우면 설정 초안·입력 중인 값이 사라진다.
-    if (state) { toast('서버 연결이 끊겼습니다. 다시 연결을 시도합니다.'); return; }
-    setHtml(document.getElementById('main'), `<h1>서버에 연결하지 못했습니다</h1><p class="lede">터미널에서 <code>npm run dev</code> 가 실행 중인지 확인하세요. 켜져 있으면 이 페이지가 저절로 다시 붙습니다.</p>`);
+    if (state) { toast('review_bot 과 연결이 끊겼어요. 다시 연결하는 중이에요.'); return; }
+    setHtml(document.getElementById('main'), `<h1>review_bot 이 꺼져 있어요</h1><p class="lede">review_bot 폴더의 <b>시작하기.command</b> 를 열어 주세요. 켜지면 이 화면이 저절로 다시 연결돼요.</p>`);
     renderedTab = null;
   }
 };
@@ -397,7 +415,7 @@ const isTyping = () => {
   return el && document.getElementById('main').contains(el) && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
 };
 
-/* ── 처리할 것 계산 — 대시보드·탭 배지·리뷰 필터가 같은 기준을 쓴다 ── */
+/* ── 확인할 것 계산 — 홈·탭 숫자·리뷰 기록 보기가 같은 기준을 쓴다 ── */
 // 같은 PR 은 가장 최근 리뷰만 본다(다시 리뷰했으면 옛 실패·미게시는 잊는다). state.reviews 는 최신순.
 const latestReviews = () => {
   const seen = new Set();
@@ -415,13 +433,13 @@ const todoTotal = () => todoReviews().length + state.judgeQueue.length;
 
 const renderChrome = () => {
   document.querySelectorAll('nav button').forEach((button) => button.setAttribute('aria-current', button.dataset.tab === tab ? 'page' : 'false'));
-  const todo = todoTotal();
-  document.getElementById('count-todo').textContent = todo || '';
+  document.getElementById('count-todo').textContent = todoTotal() || '';
   document.getElementById('count-judge').textContent = state.judgeQueue.length || '';
   const s = state.status;
-  const pill = document.getElementById('pill');
-  pill.innerHTML = `<span class="pulse ${state.config.paused ? 'off' : s.current ? 'busy' : ''}" aria-hidden="true"></span>${state.config.paused ? '자동 실행 멈춤' : s.current ? esc(`진행 중: ${s.current}`) : '대기 중'}`;
-  pill.title = state.viewer ? `gh 계정 ${state.viewer}` : 'gh 로그인 확인 필요';
+  const el = document.getElementById('now-state');
+  const text = state.config.paused ? '자동 확인 멈춤' : s.current ? `${s.current} 중` : '켜져 있음';
+  el.innerHTML = `<span class="dot ${state.config.paused ? 'off' : s.current ? 'busy' : ''}" aria-hidden="true"></span>${esc(text)}`;
+  el.title = state.viewer ? `GitHub 계정 ${state.viewer}` : 'GitHub 로그인을 확인해 주세요';
 };
 
 const render = (force = false) => {
@@ -442,7 +460,7 @@ const render = (force = false) => {
   settingsDraft = null;
   if (!force && renderedTab === tab && isTyping()) return;
   if (tab === 'reviews' && renderedTab === 'reviews' && !force) {
-    // 검색·필터 막대는 두고 목록만 바꾼다.
+    // 검색·보기 막대는 두고 목록만 바꾼다.
     setHtml(document.getElementById('review-list'), renderReviewList());
     syncChips();
     return;
@@ -456,183 +474,191 @@ const render = (force = false) => {
   if (tab === 'reviews') document.getElementById('review-list')._html = null;
 };
 
-/* ── 대시보드 ── */
-const renderChecks = (results) => `<ul class="checks">${results.map((r) => `<li><span class="${esc(r.level)}" aria-hidden="true">${r.level === 'ok' ? '✓' : r.level === 'warn' ? '!' : '✕'}</span><span><span class="lbl">${esc(r.label)}</span> <span class="muted">${esc(r.detail)}</span>${r.fix && r.level !== 'ok' ? `<span class="fix">${esc(r.fix).replace(/`([^`]+)`/g, '<code>$1</code>')}</span>` : ''}</span></li>`).join('')}</ul>`;
+/* ── 홈 ── */
+const renderChecks = (results) => `<ul class="checks">${results.map((r) => {
+  const mark = r.level === 'ok' ? '<span class="mark-ok" aria-label="통과">✓</span>' : r.level === 'warn' ? '<span class="mark-warn" aria-label="주의">!</span>' : '<span class="mark-fail" aria-label="막힘">✕</span>';
+  const fix = r.fix && r.level !== 'ok' ? `<span class="fix">${esc(r.fix).replace(/`([^`]+)`/g, '<code>$1</code>')}</span>` : '';
+  return `<li>${mark}<span class="name">${esc(r.label)}</span><span class="muted">${esc(r.detail)}</span>${fix}</li>`;
+}).join('')}</ul>`;
 
-const renderOnboarding = () => {
+const renderFirstRun = () => {
   const envOk = doctor ? !doctor.some((r) => r.level === 'fail') : false;
   const hasRepos = state.config.repos.length > 0;
   const hasReview = state.reviews.some((r) => r.status === 'done');
   if (envOk && hasRepos && hasReview) return '';
   const current = !envOk ? 0 : !hasRepos ? 1 : 2;
-  const cls = (i, done) => (done ? 'done' : i === current ? 'now' : 'wait');
+  const cls = (i, done) => (done ? 'done' : i === current ? 'now' : 'later');
   return `
-    <section class="onboard" aria-labelledby="onboard-title">
-      <h2 id="onboard-title">처음이라면 이 순서로</h2>
-      <p class="muted small" style="margin:0">세 단계를 끝내면 열린 PR 을 알아서 리뷰합니다. 게시는 내가 확인한 뒤에만 합니다.</p>
+    <section class="firstrun" aria-labelledby="firstrun-title">
+      <h2 id="firstrun-title">처음 쓰신다면, 세 가지만 하면 돼요</h2>
       <ol class="steps">
-        <li class="${cls(0, envOk)}"><div><strong>환경 점검${envOk ? ' 통과' : ''}</strong>
-          ${doctor ? renderChecks(envOk ? doctor.filter((r) => r.level !== 'ok') : doctor) : '<span class="muted small">점검 중…</span>'}
-          <p class="btn-row"><button class="btn ${current === 0 ? 'primary' : 'ghost'}" data-action="recheck">다시 점검</button></p></div></li>
-        <li class="${cls(1, hasRepos)}"><div><strong>감시할 레포 고르기</strong>
-          <span class="muted small">${hasRepos ? esc(state.config.repos.map((r) => r.repo).join(', ')) : '설정에서 내 레포 목록 중 고릅니다. 처음에는 "바로 게시" 를 끈 채로 결과만 보는 것을 권합니다.'}</span>
-          ${hasRepos ? '' : '<p class="btn-row"><a class="btn primary" href="#settings">레포 고르러 가기</a></p>'}</div></li>
-        <li class="${cls(2, hasReview)}"><div><strong>첫 리뷰 돌려 보기</strong>
-          <span class="muted small">리뷰 탭에 PR 주소를 붙여 넣거나, 감시 레포가 있으면 아래 "지금 PR 찾기" 를 누르세요. 끝나면 이 화면 맨 위 "지금 처리할 것" 에 올라옵니다.</span>
-          <p class="btn-row"><a class="btn ${current === 2 ? 'primary' : 'ghost'}" href="#reviews">PR 하나 리뷰해 보기</a></p></div></li>
+        <li class="${cls(0, envOk)}"><div><span class="title">${envOk ? '연결 확인 완료' : '연결 확인하기'}</span>
+          ${doctor ? renderChecks(envOk ? doctor.filter((r) => r.level !== 'ok') : doctor) : '<span class="muted">확인하는 중이에요.</span>'}
+          ${envOk ? '' : '<p class="actions"><button class="btn main" data-action="recheck">다시 확인</button></p>'}</div></li>
+        <li class="${cls(1, hasRepos)}"><div><span class="title">리뷰할 저장소 고르기</span>
+          <span class="muted">${hasRepos ? `${esc(state.config.repos.map((r) => r.repo).join(', '))} 을 지켜보고 있어요.` : '저장소는 GitHub 에서 코드를 모아 두는 곳이에요. 설정에서 내 저장소 목록 중 골라 주세요.'}</span>
+          ${hasRepos ? '' : `<p class="actions"><a class="btn ${current === 1 ? 'main' : ''}" href="#settings">저장소 고르러 가기</a></p>`}</div></li>
+        <li class="${cls(2, hasReview)}"><div><span class="title">첫 리뷰 받아 보기</span>
+          <span class="muted">PR 은 "이렇게 코드를 바꾸고 싶어요" 하는 요청이에요. PR 주소 하나를 넣으면 몇 분 안에 리뷰가 나와요. 결과는 GitHub 에 바로 올라가지 않고, 먼저 여기서 보여 드려요.</span>
+          <p class="actions"><a class="btn ${current === 2 ? 'main' : ''}" href="#reviews">PR 하나 리뷰해 보기</a></p></div></li>
       </ol>
     </section>`;
 };
 
-const todoItem = (tagClass, tag, main, sub, actions) => `<li><span class="tag ${tagClass}">${tag}</span><div class="what">${main}${sub ? `<span class="small muted">${sub}</span>` : ''}</div><div class="btn-row">${actions}</div></li>`;
+const todoRow = (kindClass, kind, title, sub, action) => `<li><span class="kind ${kindClass}"><span>${kind}</span></span><div class="what"><b>${title}</b>${sub ? `<span class="muted">${sub}</span>` : ''}</div><div>${action}</div></li>`;
 
 const renderTodo = () => {
   const s = state.status;
-  const items = [];
+  const rows = [];
   if (s.current) {
-    items.push(todoItem('run', '진행 중', `<b>${esc(s.current)} <span class="muted small" data-elapsed="${esc(s.startedAt)}">${elapsed(s.startedAt)}</span></b>`,
-      `${s.step ? `${esc(s.step)} · ` : ''}${s.queue.length ? `다음 ${s.queue.length}건 대기` : '대기 중인 작업 없음'}`, ''));
+    rows.push(todoRow('run', '진행 중', `${esc(s.current)} <span class="muted small" data-elapsed="${esc(s.startedAt)}">${elapsed(s.startedAt)}</span>`,
+      `${s.step ? esc(s.step) : '잠시만 기다려 주세요.'}${s.queue.length ? ` 다음 차례로 ${s.queue.length}개가 기다리고 있어요.` : ''}`, ''));
   }
   if (state.judgeQueue.length) {
-    const first = state.judgeQueue[0];
-    items.push(todoItem('judge', '판정 필요', `<b>답글만 달린 지적 ${state.judgeQueue.length}건</b>`,
-      `${esc(first.repo)}#${first.number} 등. 채택·기각을 정해야 학습에 쓰입니다.`, '<a class="btn primary" href="#learning">판정하러 가기</a>'));
+    rows.push(todoRow('ask', '확인 필요', `봇의 의견 ${state.judgeQueue.length}개에 답글이 달렸어요`,
+      '맞는 의견인지, 이 저장소에선 괜찮은 것인지 골라 주세요. 고른 대로 봇이 기억해요.', '<a class="btn main" href="#learning">확인하러 가기</a>'));
   }
   const reviews = todoReviews();
-  const shown = reviews.slice(0, Math.max(TODO_PREVIEW, 0));
+  const shown = reviews.slice(0, TODO_PREVIEW);
   for (const review of shown) {
-    const name = `${esc(review.repo)}#${review.number} ${esc(review.title || '')}`;
+    const title = `${prName(review)} ${esc(review.title || '')}`;
     if (review.status === 'failed') {
-      items.push(todoItem('fail', '리뷰 실패', `<b>${name}</b>`, esc(firstLine(review.error)) || '원인을 알 수 없습니다.',
-        `<button class="btn primary" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button>`));
+      rows.push(todoRow('fail', '리뷰 실패', title, esc(explainError(review.error)),
+        `<button class="btn" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button>`));
     } else {
       const must = mustCount(review);
-      items.push(todoItem('post', '게시 안 함', `<b>${name}</b>`,
-        `지적 ${review.findings.length}건${must ? `, 머지 전 필수 ${must}건` : ''} · ${ago(review.finishedAt || review.createdAt)}`,
-        `<button class="btn primary" data-action="preview" data-id="${esc(review.id)}">게시 미리보기</button>`));
+      rows.push(todoRow('', '올리기 전', title,
+        `의견 ${review.findings.length}개${must ? `, 그중 꼭 고칠 것 ${must}개` : ''}. ${ago(review.finishedAt || review.createdAt)} 리뷰했어요.`,
+        `<button class="btn" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>`));
     }
   }
   const more = reviews.length - shown.length;
-  const body = items.length
-    ? `<ul class="todo">${items.join('')}</ul>${more > 0 ? `<p class="small" style="margin:8px 0 0"><a href="#reviews" data-action="filter-todo">나머지 ${more}건 리뷰 탭에서 보기</a></p>` : ''}`
-    : `<div class="todo-empty"><strong>지금 처리할 것이 없습니다.</strong>${state.config.paused ? '자동 실행이 멈춰 있어 새 PR 은 들어오지 않습니다.' : `다음 PR 찾기는 ${until(s.nextSweepAt)}입니다.`}</div>`;
-  return `<h2 id="todo-h">지금 처리할 것${items.length ? ` <span class="count" style="margin:0">${todoTotal()}</span>` : ''}</h2>${body}`;
+  if (rows.length === 0) {
+    return `<div class="calm">${state.config.paused ? '자동 확인이 멈춰 있어서 새 PR 은 들어오지 않아요.' : `새 PR 이 올라오면 알아서 리뷰해 둘게요. 다음 확인은 ${until(s.nextSweepAt)}이에요.`}</div>`;
+  }
+  return `<ul class="todo">${rows.join('')}</ul>${more > 0 ? `<p class="small"><a href="#reviews" data-action="filter-todo">나머지 ${more}개 더 보기</a></p>` : ''}`;
 };
 
 const trendChart = (trend) => {
-  const w = 360, h = 140, padL = 22, padB = 20, barGap = 8;
+  const w = 360, h = 130, padL = 20, padB = 20, gap = 8;
   const max = Math.max(1, ...trend.map((t) => t.accepted + t.rejected));
-  const bw = (w - padL) / trend.length - barGap;
-  const unit = (h - padB - 14) / max;
+  const bw = (w - padL) / trend.length - gap;
+  const unit = (h - padB - 12) / max;
   const bars = trend.map((t, i) => {
-    const x = padL + i * (bw + barGap);
-    const accH = t.accepted * unit;
-    const rejH = t.rejected * unit;
-    const label = new Date(t.weekEnd);
-    return `<g><title>${label.getMonth() + 1}/${label.getDate()} 까지 한 주: 채택 ${t.accepted}, 기각 ${t.rejected}</title>
-      <rect x="${x}" y="${h - padB - accH}" width="${bw}" height="${accH}" fill="var(--ok)"></rect>
-      <rect x="${x}" y="${h - padB - accH - rejH}" width="${bw}" height="${rejH}" fill="var(--bad)"></rect>
-      <text x="${x + bw / 2}" y="${h - 5}" text-anchor="middle">${label.getMonth() + 1}/${label.getDate()}</text></g>`;
+    const x = padL + i * (bw + gap);
+    const okH = t.accepted * unit;
+    const noH = t.rejected * unit;
+    const d = new Date(t.weekEnd);
+    return `<g><title>${d.getMonth() + 1}월 ${d.getDate()}일까지 한 주: 맞음 ${t.accepted}개, 틀림 ${t.rejected}개</title>
+      <rect x="${x}" y="${h - padB - okH}" width="${bw}" height="${okH}" fill="var(--good)"></rect>
+      <rect x="${x}" y="${h - padB - okH - noH}" width="${bw}" height="${noH}" fill="var(--danger)"></rect>
+      <text x="${x + bw / 2}" y="${h - 5}" text-anchor="middle">${d.getMonth() + 1}/${d.getDate()}</text></g>`;
   }).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="최근 8주 주별 채택과 기각 건수">
-    <line x1="${padL}" x2="${w}" y1="${h - padB}" y2="${h - padB}" stroke="var(--rule)"></line>
-    <text x="0" y="12">${max}</text><text x="0" y="${h - padB}">0</text>${bars}</svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="최근 8주 동안 주마다 맞은 의견과 틀린 의견 수">
+    <line x1="${padL}" x2="${w}" y1="${h - padB}" y2="${h - padB}" stroke="var(--line)"></line>${bars}</svg>`;
 };
 
-const renderRepoStats = () => {
-  if (state.stats.length === 0) return `<div class="empty">아직 감시하는 레포가 없습니다. <a href="#settings">설정</a>에서 레포를 고르면 ${state.config.sweepIntervalMin}분마다 열린 PR 을 찾아 리뷰합니다.</div>`;
-  return `<ul class="repos">${state.stats.map((row) => `<li>
-    <div><a class="name" href="#reviews" data-action="filter-repo" data-repo="${esc(row.repo)}">${esc(row.repo)}</a>
-      <div class="small muted">${!row.learning ? '학습 꺼짐' : row.learnedCategories.length ? `학습된 규약: ${esc(row.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', '))}` : '학습된 규약 아직 없음'}</div></div>
-    <div class="nums"><span>리뷰 <b>${row.reviews}</b></span><span>게시한 지적 <b>${row.posted}</b></span><span>채택 <b>${row.accepted}</b></span><span>기각 <b>${row.rejected}</b></span>
-      ${row.needsJudge ? `<a class="st NEEDS_JUDGE" href="#learning">판정 필요 ${row.needsJudge}</a>` : ''}
-      <span>채택률 ${row.adoptionRate === null ? '<span class="muted">–</span>' : `<span class="rate">${Math.round(row.adoptionRate * 100)}%</span>`}</span></div>
-  </li>`).join('')}</ul>`;
+const renderScores = () => {
+  if (state.stats.length === 0) return '';
+  const rows = state.stats.map((row) => {
+    const decided = row.accepted + row.rejected;
+    const line = decided === 0
+      ? `아직 반응이 없어요. 리뷰 ${row.reviews}번 했어요.`
+      : `반응이 온 의견 ${decided}개 중 ${row.accepted}개가 맞았어요.${row.needsJudge ? ` 확인할 의견이 ${row.needsJudge}개 있어요.` : ''}`;
+    return `<li><a class="repo" href="#reviews" data-action="filter-repo" data-repo="${esc(row.repo)}">${esc(row.repo)}</a>
+      <span class="pct">${row.adoptionRate === null ? '<span class="muted">–</span>' : `${Math.round(row.adoptionRate * 100)}%`}</span>
+      <span class="line2">${line}${row.learning && row.learnedCategories.length ? ` 전에 틀렸던 "${esc(row.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', '))}" 의견은 기억하고 있어요.` : ''}</span></li>`;
+  }).join('');
+  const decidedAny = state.trend.some((t) => t.accepted + t.rejected > 0);
+  return `
+    <h2>봇이 얼마나 맞았나요</h2>
+    <p class="section-note">올린 의견에 👍 를 누르면 맞은 것, 👎 를 누르면 틀린 것으로 세요.</p>
+    <ul class="scores">${rows}</ul>
+    ${decidedAny ? `<div class="chart-wrap"><p class="legend"><i style="background:var(--good)"></i><span>맞음</span><i style="background:var(--danger)"></i><span>틀림</span> 최근 8주</p>${trendChart(state.trend)}</div>` : ''}`;
 };
 
 const renderDashboard = () => {
   const s = state.status;
   const paused = state.config.paused;
   const repos = state.config.repos;
-  const decided = state.trend.reduce((sum, t) => sum + t.accepted + t.rejected, 0);
-  const envFail = doctor ? doctor.filter((r) => r.level === 'fail').length : 0;
-  const onboarding = renderOnboarding();
   const firstRun = state.reviews.length === 0 && repos.length === 0;
-  const maxCat = Math.max(1, ...state.categories.map((c) => c.accepted + c.rejected));
-  const charts = decided === 0 && state.categories.length === 0
-    ? '<div class="empty">아직 판정된 지적이 없습니다. 게시한 지적에 👍 나 👎 를 누르면 여기에 쌓입니다.</div>'
-    : `<div class="charts">
-        <div><div class="legend"><span><i style="background:var(--ok)"></i>채택</span><span><i style="background:var(--bad)"></i>기각</span></div>
-          ${trendChart(state.trend)}<p class="chart-cap">최근 8주, 판정한 날짜 기준</p></div>
-        <div>${state.categories.map((c) => `<div class="cat-row"><span>${esc(CATEGORY[c.category] ?? c.category)}</span>
-          <span class="cat-bar" title="채택 ${c.accepted}, 기각 ${c.rejected}"><span style="width:${(c.accepted / maxCat) * 100}%;background:var(--ok)"></span><span style="width:${(c.rejected / maxCat) * 100}%;background:var(--bad)"></span></span>
-          <span class="muted">${c.accepted}/${c.rejected}</span></div>`).join('')}
-          <p class="chart-cap">종류별 채택/기각. 기각이 많은 종류가 학습 규약 후보입니다.</p></div>
-      </div>`;
+  const total = todoTotal();
+  const envFail = doctor ? doctor.filter((r) => r.level === 'fail').length : 0;
+  const firstRunHtml = renderFirstRun();
+  const watching = repos.filter((r) => r.autoReview).length;
+  const headline = firstRun
+    ? '반가워요. 몇 가지만 준비하면 PR 을 대신 읽어 드릴게요.'
+    : total > 0
+      ? `지금 확인할 것이 <span class="hl">${total}개</span> 있어요.`
+      : '지금은 할 일이 없어요.';
+  // 멈춤은 바로 아래 안내 띠가 말한다 — 같은 말을 두 번 하지 않는다.
+  const sub = firstRun || paused ? '' : watching
+      ? `저장소 ${watching}곳을 ${state.config.sweepIntervalMin}분마다 확인하고 있어요. 다음 확인은 ${until(s.nextSweepAt)}이에요.`
+      : '자동으로 확인하는 저장소가 없어요. PR 은 리뷰 기록 화면에서 직접 넣을 수 있어요.';
   return `
-    <h1>대시보드</h1>
-    <p class="lede">레포 ${repos.length}개 (자동 리뷰 ${repos.filter((r) => r.autoReview).length}개, 바로 게시 ${repos.filter((r) => r.publish).length}개).${state.avgReviewSec ? ` 리뷰 한 건에 평균 ${state.avgReviewSec < 60 ? `${state.avgReviewSec}초` : `${Math.round(state.avgReviewSec / 60)}분`} 걸립니다.` : ''}</p>
-    ${onboarding ? '' : envFail ? `<div class="alert" role="alert">환경 점검에서 막힌 항목이 ${envFail}개 있습니다. <a href="#settings">설정의 환경 점검</a>에서 안내를 확인하세요.</div>` : ''}
-    ${paused ? `<div class="pausebar"><span><strong>자동 실행이 멈춰 있습니다.</strong> <span class="muted small">새 PR 을 찾지 않고 반응도 걷지 않습니다. 직접 시작한 리뷰는 돌아갑니다.</span></span><button class="btn" data-action="pause">자동 실행 켜기</button></div>` : ''}
-    ${onboarding}
-    ${firstRun ? '' : renderTodo()}
-    <h2>자동 실행 <span class="sub">${paused ? '멈춤' : '켜짐'}</span></h2>
-    <div class="auto" aria-live="polite">
-      <span class="muted small">다음 PR 찾기 ${paused ? '멈춤' : until(s.nextSweepAt)} · 다음 반응 걷기 ${paused ? '멈춤' : until(s.nextHarvestAt)}</span>
-      <span class="btn-row">
-        <button class="btn" data-action="sweep">지금 PR 찾기</button>
-        <button class="btn" data-action="harvest">지금 반응 걷기</button>
-        ${paused ? '' : '<button class="btn ghost" data-action="pause">자동 실행 멈추기</button>'}
-      </span>
-    </div>
-    <h2>레포별 현황</h2>${renderRepoStats()}
-    <h2>판정 추이</h2>${charts}
-    <details class="fold"><summary>최근 기록 ${state.activity.length ? `<span class="sub">${state.activity.length}건</span>` : ''}</summary>
-      <div class="log">${state.activity.length === 0 ? '<p class="muted">기록이 없습니다.</p>' : state.activity.slice(0, 40).map((entry) => `<div class="${esc(entry.level)}"><span class="muted">${ago(entry.at)}</span> ${esc(entry.message)}</div>`).join('')}</div></details>
-    <p class="muted small" style="margin-top:24px">상태 파일 ${esc(state.stateFile)}${state.viewer ? ` · gh 계정 ${esc(state.viewer)}` : ' · gh 로그인 확인 필요'}</p>`;
+    <p class="headline">${headline}</p>
+    ${sub ? `<p class="headline-sub">${sub}</p>` : ''}
+    ${paused ? `<div class="notice"><p>자동 확인이 멈춰 있어서 새 PR 을 찾지 않고 반응도 확인하지 않아요. 직접 넣은 리뷰는 그대로 돌아가요.</p><button class="btn" data-action="pause">다시 켜기</button></div>` : ''}
+    ${!firstRunHtml && envFail ? `<div class="notice bad" role="alert"><p>연결에 문제가 ${envFail}개 있어요. 설정 화면 맨 아래에서 무엇을 하면 되는지 확인해 주세요.</p><a class="btn" href="#settings">확인하러 가기</a></div>` : ''}
+    ${firstRunHtml}
+    ${firstRun ? '' : `<h2 class="hidden-label">확인할 것</h2>${renderTodo()}`}
+    ${firstRun ? '' : renderScores()}
+    <details class="more"><summary>최근 기록과 수동 실행</summary>
+      <p class="actions" style="margin-bottom:14px">
+        <button class="btn" data-action="sweep">지금 새 PR 확인</button>
+        <button class="btn" data-action="harvest">지금 반응 확인</button>
+        ${paused ? '' : '<button class="btn quiet" data-action="pause">자동 확인 멈추기</button>'}
+      </p>
+      <div class="log">${state.activity.length === 0 ? '<p class="muted">아직 기록이 없어요.</p>' : state.activity.slice(0, 40).map((entry) => `<p class="${esc(entry.level)}"><span class="muted">${ago(entry.at)}</span> ${esc(entry.message)}</p>`).join('')}</div>
+      <dl class="tech"><dt>GitHub 계정</dt><dd>${state.viewer ? esc(state.viewer) : '확인되지 않음'}</dd><dt>기록이 저장되는 곳</dt><dd>${esc(state.stateFile)}</dd></dl>
+    </details>`;
 };
 
-/* ── 리뷰 ── */
-const renderFinding = (finding) => `
-  <div class="finding">
-    <div><span class="mark ${esc(finding.severity)}">${SEVERITY[finding.severity] ?? '기타'}</span>
-      <span class="small muted">${esc(CATEGORY[finding.category] ?? '미분류')}</span>
-      ${finding.file ? `<span class="loc">${esc(finding.file)}${finding.line ? `:${finding.line}` : ''}</span>` : ''}</div>
-    <div class="st ${esc(finding.status)}">${finding.commentUrl ? `<a href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">${STATUS[finding.status] ?? '기타'}</a>` : (STATUS[finding.status] ?? '기타')}</div>
-    <p class="finding-text">${esc(finding.body)}</p>
+/* ── 리뷰 기록 ── */
+const renderOpinion = (finding) => `
+  <div class="opinion">
+    <div class="opinion-head">
+      <span class="sev ${esc(finding.severity)}">${SEVERITY[finding.severity] ?? '의견'}</span>
+      <span class="muted small">${esc(CATEGORY[finding.category] ?? '기타')}</span>
+      ${finding.file ? `<span class="where">${esc(finding.file)}${finding.line ? ` ${Number(finding.line)}번째 줄` : ''}</span>` : ''}
+      <span class="said ${esc(finding.status)}">${finding.commentUrl ? `<a href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">${SAID[finding.status] ?? ''}</a>` : (SAID[finding.status] ?? '')}</span>
+    </div>
+    <p>${esc(finding.body)}</p>
   </div>`;
 
 const renderReview = (review) => {
   const r = review.review;
-  const head = review.status === 'running' ? '<span class="muted">리뷰 중…</span>'
-    : review.status === 'failed' ? '<span class="st REJECTED">실패</span>'
-    : `<span class="verdict ${esc(r.riskLevel)}">${review.published ? '' : review.findings.length ? '<span class="tag post">게시 안 함</span> ' : ''}위험도 ${RISK[r.riskLevel] ?? '판단 보류'}, ${VERDICT[r.approvalRecommendation] ?? '판단 보류'}</span>`;
-  const extras = [
-    TRIGGER[review.trigger], review.modelUsed,
-    review.rulesUsed?.length ? `규칙 ${review.rulesUsed.join(', ')}` : null,
-    review.learnedCategories?.length ? `학습 규약 ${review.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', ')}` : null,
-    duration(review) ? `${duration(review)} 걸림` : null,
-    ago(review.createdAt),
-  ].filter(Boolean).map(esc).join(' · ');
+  const head = review.status === 'running' ? '<span class="rverdict muted">리뷰하는 중</span>'
+    : review.status === 'failed' ? '<span class="rverdict high">리뷰 실패</span>'
+    : `<span class="rverdict ${r.approvalRecommendation === 'request_changes' ? 'high' : ''}">${VERDICT[r.approvalRecommendation] ?? ''}</span>`;
+  const when = `${TRIGGER[review.trigger] ?? ''} ${ago(review.createdAt)} 리뷰${duration(review) ? `, ${duration(review)} 걸림` : ''}${review.published ? ', GitHub 에 올림' : ''}`;
   let body = '';
   if (review.status === 'failed') {
-    body = `<p class="error-text">${esc(review.error)}</p><p class="btn-row"><button class="btn" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button></p>`;
+    body = `<p>${esc(explainError(review.error))}</p>
+      <p class="actions"><button class="btn main" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button></p>
+      <details class="more"><summary>오류 원문</summary><p class="error-text">${esc(review.error)}</p></details>`;
   } else if (r) {
-    const actions = review.published
-      ? `<p class="posted-by">게시함 <a href="${safeUrl(review.published.url)}" target="_blank" rel="noopener">GitHub 에서 보기</a> (${ago(review.published.at)})</p>`
-      : `<p class="btn-row"><button class="btn primary" data-action="preview" data-id="${esc(review.id)}">게시 미리보기</button><span class="muted small">어느 줄에 무엇이 달릴지 먼저 보여 줍니다.</span></p>`;
+    const sorted = [...review.findings].sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
+    const publish = review.published
+      ? `<a class="btn" href="${safeUrl(review.published.url)}" target="_blank" rel="noopener">GitHub 에서 보기</a>`
+      : review.findings.length ? `<button class="btn main" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>` : '';
+    const tech = [
+      review.modelUsed ? `<dt>리뷰한 AI</dt><dd>${esc(review.modelUsed)}</dd>` : '',
+      review.rulesUsed?.length ? `<dt>함께 읽은 저장소 규칙</dt><dd>${esc(review.rulesUsed.join(', '))}</dd>` : '',
+      review.learnedCategories?.length ? `<dt>기억하고 있던 것</dt><dd>${esc(review.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', '))}</dd>` : '',
+    ].join('');
     body = `
-      ${r.summary ? `<blockquote class="summary-quote">${esc(r.summary)}</blockquote>` : ''}
-      ${r.undeterminedReason ? `<p class="small muted">판단 보류 사유: ${esc(r.undeterminedReason)}</p>` : ''}
-      ${review.truncated ? '<p class="small" style="color:var(--test)">diff 가 커서 뒷부분은 보지 못했습니다.</p>' : ''}
-      ${review.findings.length ? [...review.findings].sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)).map(renderFinding).join('') : '<p class="muted">지적 사항이 없습니다.</p>'}
-      ${actions}
-      <p class="btn-row small" style="margin-top:12px"><a href="${safeUrl(prUrl(review.repo, review.number))}" target="_blank" rel="noopener">PR 열기</a><button class="btn ghost" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button></p>`;
+      ${r.summary ? `<p class="summary">${esc(r.summary)}</p>` : ''}
+      ${r.undeterminedReason ? `<p class="muted">판단하기 어려웠던 이유: ${esc(r.undeterminedReason)}</p>` : ''}
+      ${review.truncated ? '<p class="muted">바뀐 내용이 너무 길어서 뒷부분은 읽지 못했어요.</p>' : ''}
+      ${sorted.length ? sorted.map(renderOpinion).join('') : '<p class="muted">고칠 것을 찾지 못했어요.</p>'}
+      <p class="actions">${publish}<a class="btn quiet" href="${safeUrl(prUrl(review.repo, review.number))}" target="_blank" rel="noopener">PR 열기</a><button class="btn quiet" data-action="rereview" data-id="${esc(review.id)}">다시 리뷰</button></p>
+      ${tech ? `<details class="more"><summary>리뷰에 쓰인 것</summary><dl class="tech">${tech}</dl></details>` : ''}`;
   }
   const cls = review.status === 'failed' ? 'failed' : needsAction(review) ? 'needs' : '';
   return `<details class="review ${cls}" data-review="${esc(review.id)}" ${openReviews.has(review.id) ? 'open' : ''}>
-    <summary><span class="review-title">${esc(review.repo)}#${review.number} ${esc(review.title || '(조회 중)')}</span>${head}<span class="review-meta">${extras}</span></summary>
-    <div class="review-body">${body}</div>
+    <summary><span class="rtitle">${prName(review)} ${esc(review.title || 'PR 내용을 가져오는 중')}</span>${head}<span class="rmeta">${esc(when)}</span></summary>
+    <div class="rbody">${body}</div>
   </details>`;
 };
 
@@ -649,8 +675,8 @@ const matchesFilters = (review, todoIds) => {
   return true;
 };
 
-const CHIPS = [['', '전체'], ['todo', '처리 필요'], ['must', '머지 전 필수 있음'], ['failed', '실패'], ['posted', '게시함']];
-// 칩마다 "누르면 몇 건인지" — 레포·검색 조건은 그대로 두고 상태만 바꿔 센다.
+const CHIPS = [['', '전체'], ['todo', '확인할 것'], ['must', '꼭 고칠 것 있음'], ['failed', '실패'], ['posted', '올린 것']];
+// 보기마다 "누르면 몇 개인지" — 저장소·검색 조건은 그대로 두고 상태만 바꿔 센다.
 const chipCount = (value) => {
   const todoIds = new Set(todoReviews().map((r) => r.id));
   const saved = filters.status;
@@ -659,111 +685,126 @@ const chipCount = (value) => {
   filters.status = saved;
   return n;
 };
-const renderChips = () => `<div class="chips" role="group" aria-label="상태로 거르기" id="chips">${CHIPS.map(([value, label]) =>
-  `<button type="button" class="chip" data-action="chip" data-value="${value}" aria-pressed="${filters.status === value}">${label}<span class="n">${chipCount(value)}</span></button>`).join('')}</div>`;
-const syncChips = () => document.querySelectorAll('#chips .chip').forEach((chip) => {
+const renderChips = () => `<div class="views" role="group" aria-label="보기" id="chips">${CHIPS.map(([value, label]) =>
+  `<button type="button" data-action="chip" data-value="${value}" aria-pressed="${filters.status === value}">${label}<span class="n">${chipCount(value)}</span></button>`).join('')}</div>`;
+const syncChips = () => document.querySelectorAll('#chips button').forEach((chip) => {
   chip.setAttribute('aria-pressed', String(chip.dataset.value === filters.status));
   chip.querySelector('.n').textContent = chipCount(chip.dataset.value);
 });
 
 const renderReviewList = () => {
-  if (state.reviews.length === 0) return '<div class="empty">아직 리뷰가 없습니다. 위에 PR 주소를 넣거나 설정에서 감시할 레포를 고르세요.</div>';
+  if (state.reviews.length === 0) return '<div class="empty">아직 리뷰가 없어요. 위에 PR 주소를 넣어 보세요.</div>';
   const todoIds = new Set(todoReviews().map((r) => r.id));
   const shown = state.reviews.filter((review) => matchesFilters(review, todoIds));
-  return `<p class="result-count">${shown.length === state.reviews.length ? `${shown.length}건` : `${state.reviews.length}건 중 ${shown.length}건`}</p>
-    ${shown.length ? shown.map(renderReview).join('') : '<div class="empty">조건에 맞는 리뷰가 없습니다.</div>'}`;
+  return `<p class="result-count">${shown.length}개</p>
+    ${shown.length ? shown.map(renderReview).join('') : '<div class="empty">조건에 맞는 리뷰가 없어요.</div>'}`;
 };
 
 const renderReviews = () => {
   const repos = [...new Set(state.reviews.map((r) => r.repo))].sort();
   return `
-    <h1>리뷰</h1>
-    <p class="lede">자동 실행, 이 페이지, CLI 로 돌린 리뷰가 모두 여기 쌓입니다. 리뷰는 한 번에 하나씩 차례로 돌고${state.avgReviewSec ? ` 평균 ${Math.max(1, Math.round(state.avgReviewSec / 60))}분` : ' 보통 1~5분'} 걸립니다.</p>
-    <form class="inline start" id="review-form" aria-label="PR 직접 리뷰">
-      <label>PR 주소 또는 owner/repo#번호<input type="text" name="pr" required placeholder="https://github.com/owner/repo/pull/123"></label>
-      <label>모델<select name="provider"><option value="">설정값 (${esc(state.config.provider)})</option><option value="codex">codex</option><option value="claude">claude</option></select></label>
-      <button class="btn primary" type="submit">리뷰 시작</button>
-      <label class="check danger"><input type="checkbox" name="publish"><span>끝나면 확인 없이 바로 게시 <span class="muted small" style="font-weight:400">(끄면 결과만 쌓이고, 아래에서 미리보기 후 게시합니다)</span></span></label>
+    <h1>리뷰 기록</h1>
+    <p class="lede">자동으로 한 리뷰와 직접 넣은 리뷰가 모두 여기 모여요. 리뷰는 하나씩 차례로 하고, 보통 ${state.avgReviewSec ? `${Math.max(1, Math.round(state.avgReviewSec / 60))}분` : '1~5분'} 걸려요.</p>
+    <form class="direct" id="review-form" aria-label="PR 직접 리뷰">
+      <label for="pr-input">리뷰할 PR 주소</label>
+      <div class="direct-row">
+        <input type="text" id="pr-input" name="pr" required placeholder="https://github.com/회사/저장소/pull/123">
+        <button class="btn main" type="submit">리뷰 시작</button>
+      </div>
+      <details><summary>옵션</summary><div class="opts">
+        <label>리뷰할 AI<select name="provider"><option value="">설정에서 고른 AI</option><option value="codex">ChatGPT</option><option value="claude">Claude</option></select></label>
+        <label class="check danger"><input type="checkbox" name="publish"><span>끝나면 확인하지 않고 바로 GitHub 에 올리기<span class="hint">끄면 결과가 여기만 쌓이고, 확인한 뒤에 올릴 수 있어요.</span></span></label>
+      </div></details>
     </form>
     <h2>지난 리뷰</h2>
     ${renderChips()}
     <div class="filters" role="search">
-      <label>검색<input type="search" id="filter-q" value="${esc(filters.q)}" placeholder="PR 번호, 제목, 파일, 지적 내용"></label>
-      <label>레포<select id="filter-repo"><option value="">전체</option>${repos.map((r) => `<option ${filters.repo === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
+      <label>찾기<input type="search" id="filter-q" value="${esc(filters.q)}" placeholder="PR 번호, 제목, 파일 이름, 의견 내용"></label>
+      <label>저장소<select id="filter-repo"><option value="">모든 저장소</option>${repos.map((r) => `<option ${filters.repo === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
     </div>
     <div id="review-list">${renderReviewList()}</div>`;
 };
 
-/* ── 학습 ── */
+/* ── 봇이 배운 것 ── */
 const counterText = (value) => {
   const n = value.trim().length;
-  return n === 0 ? '비워 두면 수확한 내 답글을 사유로 씁니다.' : n < REASON_MIN ? `${n}자 — ${REASON_MIN}자 미만이면 학습에 쓰이지 않습니다.` : `${n}자`;
+  return n === 0 ? '비워 두면 GitHub 에 남긴 내 답글을 이유로 써요.' : n < REASON_MIN ? `${n}자예요. ${REASON_MIN}자는 넘어야 봇이 이유로 기억해요.` : `${n}자`;
 };
 
 const renderLearning = () => {
   const judge = state.judgeQueue.length === 0
-    ? '<p class="muted">판정할 지적이 없습니다. 👍·👎 없이 답글만 달린 지적이 여기 모입니다.</p>'
+    ? '<p class="empty">지금은 확인할 의견이 없어요. 👍 나 👎 없이 답글만 달린 의견이 생기면 여기 모여요.</p>'
     : state.judgeQueue.map((finding) => {
       const draft = reasonDrafts.get(finding.id) ?? finding.rejectReason ?? '';
       return `
       <div class="judge">
-        <div><span class="mark ${esc(finding.severity)}">${SEVERITY[finding.severity] ?? '기타'}</span> <span class="small muted">${esc(CATEGORY[finding.category] ?? '미분류')}</span>
-          <span class="loc">${esc(finding.repo)}#${finding.number} ${esc(finding.file ?? '')}${finding.line ? `:${finding.line}` : ''}</span>
-          ${finding.commentUrl ? `<a class="small" href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">스레드 열기</a>` : ''}</div>
-        <p class="finding-text" style="margin-top:6px">${esc(finding.body)}</p>
-        <div class="reply"><span class="small muted">내 답글</span><br>${esc(finding.replyBody)}</div>
-        <label>기각 사유
+        <div class="opinion-head"><span class="sev ${esc(finding.severity)}">${SEVERITY[finding.severity] ?? '의견'}</span>
+          <span class="muted small">${esc(finding.repo)} #${Number(finding.number)}</span>
+          ${finding.commentUrl ? `<a class="small" href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">GitHub 에서 대화 보기</a>` : ''}</div>
+        <p>${esc(finding.body)}</p>
+        <div class="reply"><span class="small muted">달린 답글</span><br>${esc(finding.replyBody)}</div>
+        <label>이 저장소에서 괜찮은 이유 (괜찮다고 고를 때만)
           <textarea data-reason="${esc(finding.id)}" aria-describedby="c-${esc(finding.id)}">${esc(draft)}</textarea></label>
         <p class="counter" id="c-${esc(finding.id)}" data-counter>${counterText(draft)}</p>
-        <p class="btn-row" style="margin-top:10px">
-          <button class="btn" data-action="judge" data-decision="ACCEPTED" data-id="${esc(finding.id)}">채택 (맞는 지적)</button>
-          <button class="btn primary" data-action="judge" data-decision="REJECTED" data-id="${esc(finding.id)}">기각 (이 레포에선 정상)</button>
+        <p class="actions">
+          <button class="btn" data-action="judge" data-decision="ACCEPTED" data-id="${esc(finding.id)}">맞는 의견이에요</button>
+          <button class="btn main" data-action="judge" data-decision="REJECTED" data-id="${esc(finding.id)}">이 저장소에선 괜찮아요</button>
         </p>
       </div>`;
     }).join('');
-  const conventions = state.stats.filter((row) => row.learning).map((row) => `
-    <h3>${esc(row.repo)}</h3>
-    ${row.learnedBlock ? `<pre class="block">${esc(row.learnedBlock)}</pre>` : '<p class="muted small">아직 규약이 없습니다. 같은 종류의 지적이 최근 90일 안에 두 번 이상 사유와 함께 기각되면 생깁니다.</p>'}`).join('');
-  const rejected = state.rejected.length === 0
-    ? '<p class="muted">기각된 지적이 없습니다.</p>'
-    : `<ul class="rej">${state.rejected.map((finding) => `<li>
-        <div class="cell"><span class="small muted">${esc(finding.repo)}#${finding.number} ${esc(CATEGORY[finding.category] ?? '미분류')}</span><br>${esc(finding.body.slice(0, 160))}${finding.body.length > 160 ? '…' : ''}</div>
-        <div class="cell small">${finding.rejectReason ? esc(finding.rejectReason.slice(0, 240)) : '<span class="muted">사유 없음 (학습 안 됨)</span>'}</div>
-        <div><label class="check"><input type="checkbox" data-action="exclude" data-id="${esc(finding.id)}" ${finding.excluded ? '' : 'checked'}> 학습에 사용</label></div>
+  // 저장소별로 "다음부터 기억할 것" — 실제로 AI 에게 넘어가는 글(learnedBlock)은 접어 둔다.
+  const memory = state.stats.filter((row) => row.learning).map((row) => {
+    const reasons = state.rejected.filter((f) => f.repo === row.repo && !f.excluded && f.rejectReason && row.learnedCategories.includes(f.category));
+    return `
+      <h3>${esc(row.repo)}</h3>
+      ${row.learnedCategories.length
+        ? `<ul class="learned">${reasons.slice(0, 6).map((f) => `<li><span class="what-kind">${esc(CATEGORY[f.category] ?? '기타')}</span>${esc(f.rejectReason)}</li>`).join('')}</ul>
+           <details class="more"><summary>AI 에게 실제로 전달되는 글</summary><pre class="block">${esc(row.learnedBlock)}</pre></details>`
+        : '<p class="muted">아직 기억할 것이 없어요. 같은 종류의 의견이 이유와 함께 두 번 틀렸다고 하면 생겨요.</p>'}`;
+  }).join('');
+  const wrong = state.rejected.length === 0
+    ? '<p class="empty">틀렸다고 한 의견이 아직 없어요.</p>'
+    : `<ul class="wrong">${state.rejected.map((finding) => `<li>
+        <div><span class="label">${esc(finding.repo)} #${Number(finding.number)}, ${esc(CATEGORY[finding.category] ?? '기타')}</span>${esc(finding.body.slice(0, 160))}${finding.body.length > 160 ? '…' : ''}</div>
+        <div><span class="label">남긴 이유</span>${finding.rejectReason ? esc(finding.rejectReason.slice(0, 240)) : '<span class="muted">이유가 없어서 기억하지 않아요.</span>'}</div>
+        <div><label class="check"><input type="checkbox" data-action="exclude" data-id="${esc(finding.id)}" ${finding.excluded ? '' : 'checked'}> 기억하기</label></div>
       </li>`).join('')}</ul>`;
   return `
-    <h1>학습</h1>
-    <p class="lede">게시한 지적에 👎 와 함께 남긴 내 답글이 기각 사유가 됩니다. 사유가 쌓이면 다음 리뷰부터 그 레포의 규약으로 실립니다. 보안 지적은 학습하지 않습니다.</p>
-    <h2>판정 필요${state.judgeQueue.length ? ` <span class="count" style="margin:0">${state.judgeQueue.length}</span>` : ''}</h2>
+    <h1>봇이 배운 것</h1>
+    <p class="lede">GitHub 에 올린 의견에 👎 를 누르고 답글로 이유를 남기면, 봇이 그 이유를 기억해요. 같은 종류의 이유가 두 번 쌓이면 다음 리뷰부터 그 말을 하지 않아요. 보안에 관한 의견은 몇 번을 틀렸다고 해도 계속 알려 드려요.</p>
+    <h2>확인해 줄 의견${state.judgeQueue.length ? ` <span class="count">${state.judgeQueue.length}</span>` : ''}</h2>
+    <p class="section-note">👍 나 👎 없이 답글만 달린 의견이에요. 맞는 의견인지 골라 주세요.</p>
     ${judge}
-    <h2>다음 리뷰에 실릴 규약</h2>
-    ${conventions || '<p class="muted">학습을 켠 레포가 없습니다.</p>'}
-    <h2>기각된 지적 <span class="sub">잘못 굳은 규약은 "학습에 사용" 을 꺼서 빼세요</span></h2>
-    ${rejected}`;
+    <h2>다음 리뷰부터 기억할 것</h2>
+    ${memory || '<p class="muted">기억하기를 켠 저장소가 없어요.</p>'}
+    <h2>틀렸다고 한 의견</h2>
+    <p class="section-note">잘못 기억한 것이 있으면 "기억하기" 를 꺼 주세요. 다음 리뷰부터 빠져요.</p>
+    ${wrong}`;
 };
 
 /* ── 설정 ── */
-const repoBadges = (repo) => `${repo.publish ? '<span class="badge danger">바로 게시</span>' : '<span class="badge">게시는 직접</span>'}<span class="badge">${repo.autoReview ? '자동 리뷰' : '수동만'}</span>${repo.learning ? '' : '<span class="badge">학습 꺼짐</span>'}`;
+const repoSay = (repo) => {
+  const auto = repo.autoReview ? `${TARGET[repo.target] ?? '열린 PR'} 을 자동으로 리뷰` : '직접 넣을 때만 리뷰';
+  const post = repo.publish ? '<span class="warn">결과를 바로 GitHub 에 올림</span>' : '결과는 확인한 뒤에 올림';
+  return `${auto}, ${post}`;
+};
 
 const repoCard = (repo, index) => `
   <details class="repo-card" data-index="${index}" data-repo="${esc(repo.repo)}" ${repoOpen.get(repo.repo) ?? settingsDraft.repos.length <= 2 ? 'open' : ''}>
-    <summary><span class="repo-name">${esc(repo.repo)}</span><span class="badges" data-badges>${repoBadges(repo)}</span><span class="chg" hidden>변경됨</span></summary>
+    <summary><span class="rname">${esc(repo.repo)}</span><span class="changed-mark" hidden>바뀜</span><span class="rsay" data-say>${repoSay(repo)}</span></summary>
     <div class="repo-body">
+      <label class="check"><input type="checkbox" data-field="autoReview" ${repo.autoReview ? 'checked' : ''}><span>새 PR 을 자동으로 리뷰하기<span class="hint">켜 두면 ${settingsDraft.sweepIntervalMin}분마다 새 PR 이 있는지 확인해요.</span></span></label>
+      <label>어떤 PR 을 리뷰할까요<select data-field="target">${Object.entries(TARGET).map(([value, label]) => `<option value="${value}" ${repo.target === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
       <div class="danger-zone">
-        <label class="check danger"><input type="checkbox" data-field="publish" ${repo.publish ? 'checked' : ''}> 리뷰가 끝나면 확인 없이 PR 에 바로 게시</label>
-        <p>내 gh 계정 이름으로 코멘트가 달립니다. 처음에는 꺼 두고 결과를 본 뒤 켜는 것을 권합니다. 켜고 저장할 때 한 번 더 확인합니다.</p>
+        <label class="check danger"><input type="checkbox" data-field="publish" ${repo.publish ? 'checked' : ''}><span>리뷰가 끝나면 확인하지 않고 바로 GitHub 에 올리기<span class="hint">내 GitHub 계정 이름으로 PR 에 의견이 남아요. 결과를 몇 번 보고 믿을 만할 때 켜는 것을 권해요.</span></span></label>
       </div>
-      <div class="grid2">
-        <label class="check"><input type="checkbox" data-field="autoReview" ${repo.autoReview ? 'checked' : ''}> 자동으로 PR 찾아 리뷰</label>
-        <label class="check"><input type="checkbox" data-field="skipDrafts" ${repo.skipDrafts ? 'checked' : ''}> draft PR 건너뛰기</label>
-        <label class="check"><input type="checkbox" data-field="learning" ${repo.learning ? 'checked' : ''}> 기각에서 배운 규약 싣기</label>
-        <label>리뷰할 PR<select data-field="target">${Object.entries(TARGET).map(([value, label]) => `<option value="${value}" ${repo.target === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
-      </div>
-      <div class="grid2">
-        <label>규칙 문서 (기본 브랜치에서 읽음, 한 줄에 하나)<textarea data-field="rulesFiles">${esc(repo.rulesFiles.join('\n'))}</textarea></label>
-        <label>직접 적는 규약 (이 레포에서 정상인 것)<textarea data-field="extraRules" placeholder="예: 마이그레이션 파일은 만들지 않는다. 스키마 변경은 db:push 로 끝난다.">${esc(repo.extraRules)}</textarea></label>
-      </div>
-      <p style="margin:14px 0 0"><button class="btn ghost" type="button" data-action="remove-repo" data-index="${index}">이 레포 빼기</button></p>
+      <details><summary>더 자세한 설정</summary><div class="adv">
+        <label class="check"><input type="checkbox" data-field="skipDrafts" ${repo.skipDrafts ? 'checked' : ''}><span>아직 작성 중인 PR(draft)은 건너뛰기</span></label>
+        <label class="check"><input type="checkbox" data-field="learning" ${repo.learning ? 'checked' : ''}><span>틀렸다고 한 의견을 기억하기</span></label>
+        <label>저장소 규칙 파일 (한 줄에 하나, 기본 브랜치에서 읽어요)<textarea data-field="rulesFiles">${esc(repo.rulesFiles.join('\n'))}</textarea></label>
+        <label>이 저장소에서 괜찮은 것 (봇이 지적하지 않았으면 하는 것을 적어 주세요)<textarea data-field="extraRules" placeholder="예: 마이그레이션 파일은 만들지 않아요.">${esc(repo.extraRules)}</textarea></label>
+        <p style="margin:0"><button class="btn quiet" type="button" data-action="remove-repo" data-index="${index}">이 저장소 빼기</button></p>
+      </div></details>
     </div>
   </details>`;
 
@@ -771,36 +812,47 @@ const renderSettings = () => {
   const c = settingsDraft;
   return `
     <h1>설정</h1>
-    <p class="lede">저장하면 바로 적용됩니다. 바꾼 곳은 노란 표시로 남고, 저장 전에는 아무것도 달라지지 않습니다.</p>
+    <p class="lede">바꾼 곳에는 노란 표시가 붙어요. 아래 "저장" 을 눌러야 적용돼요.</p>
     <form id="settings-form">
-      <h2>모델과 주기</h2>
-      <div class="settings-grid">
-        <label>리뷰 모델<select name="provider"><option value="codex" ${c.provider === 'codex' ? 'selected' : ''}>codex (ChatGPT 구독)</option><option value="claude" ${c.provider === 'claude' ? 'selected' : ''}>claude (Claude 구독)</option></select></label>
-        <label>세부 모델<input type="text" name="modelName" value="${esc(c.modelName)}" placeholder="비우면 각 CLI 기본 모델"></label>
-        <label>PR 찾는 주기 (분)<input type="number" name="sweepIntervalMin" min="1" max="1440" value="${c.sweepIntervalMin}"></label>
-        <label>반응 걷는 주기 (분)<input type="number" name="harvestIntervalMin" min="1" max="1440" value="${c.harvestIntervalMin}"></label>
-        <label>PR 당 게시할 지적 수<input type="number" name="inlineMax" min="0" max="50" value="${c.inlineMax}"></label>
-        <label>모델 제한 시간 (초)<input type="number" name="timeoutSec" min="30" max="3600" value="${c.timeoutSec}"></label>
-      </div>
-      <h2>감시할 레포 <span class="sub" id="repo-total"></span></h2>
-      <div class="picker">
-        <input type="search" id="new-repo" list="repo-options" placeholder="레포 이름으로 검색 (owner/repo)" aria-label="추가할 레포">
-        <button class="btn" type="button" data-action="add-repo">추가</button>
-        <button class="btn ghost" type="button" data-action="reload-repos">목록 새로고침</button>
-        <datalist id="repo-options">${(repoOptions ?? []).map((r) => `<option value="${esc(r.repo)}">${r.private ? '비공개' : '공개'}, ${ago(r.pushedAt)} push</option>`).join('')}</datalist>
-        <span class="muted small" id="repo-hint" style="grid-column:1/-1">${repoOptions ? `내 레포 ${repoOptions.length}개에서 고를 수 있습니다.` : '내 레포 목록을 불러오는 중…'}</span>
-      </div>
-      ${c.repos.length > 4 ? '<label style="margin-bottom:10px">감시 중인 레포 거르기<input type="search" id="repo-filter" placeholder="이름 일부"></label>' : ''}
-      <div id="repo-list">${c.repos.length ? c.repos.map(repoCard).join('') : '<div class="empty">레포를 추가하세요. 처음에는 "바로 게시" 를 끈 채로 결과를 먼저 보는 것을 권합니다.</div>'}</div>
+      <section class="set-section">
+        <h2>리뷰할 AI</h2>
+        <p class="section-note">이미 쓰고 있는 구독으로 리뷰해요. 따로 돈이 들지 않아요.</p>
+        <div class="choice" role="radiogroup" aria-label="리뷰할 AI">
+          <label><input type="radio" name="provider" value="codex" ${c.provider === 'codex' ? 'checked' : ''}> ChatGPT</label>
+          <label><input type="radio" name="provider" value="claude" ${c.provider === 'claude' ? 'checked' : ''}> Claude</label>
+        </div>
+      </section>
+      <section class="set-section">
+        <h2>리뷰할 저장소 <span class="muted small" id="repo-total" style="font-weight:400"></span></h2>
+        <div class="picker">
+          <input type="search" id="new-repo" list="repo-options" placeholder="저장소 이름을 입력하세요" aria-label="추가할 저장소">
+          <button class="btn" type="button" data-action="add-repo">추가</button>
+          <datalist id="repo-options">${(repoOptions ?? []).map((r) => `<option value="${esc(r.repo)}"></option>`).join('')}</datalist>
+        </div>
+        <p class="small muted" id="repo-hint" style="margin:0 0 14px">${repoOptions ? `내 저장소 ${repoOptions.length}개 중에서 고를 수 있어요. 목록에 없으면 <button class="btn quiet" type="button" data-action="reload-repos" style="min-height:0;padding:0">다시 불러오기</button>` : '내 저장소 목록을 불러오는 중이에요.'}</p>
+        ${c.repos.length > 4 ? '<label style="margin-bottom:10px">고른 저장소 중에서 찾기<input type="search" id="repo-filter" placeholder="이름 일부"></label>' : ''}
+        <div id="repo-list">${c.repos.length ? c.repos.map(repoCard).join('') : '<p class="empty">아직 고른 저장소가 없어요. 위에서 이름을 입력해 추가해 주세요.</p>'}</div>
+      </section>
+      <section class="set-section">
+        <details><summary>고급 설정</summary><div class="adv-grid">
+          <label>AI 모델 이름 (비우면 기본값)<input type="text" name="modelName" value="${esc(c.modelName)}"></label>
+          <label>새 PR 확인 간격 (분)<input type="number" name="sweepIntervalMin" min="1" max="1440" value="${Number(c.sweepIntervalMin)}"></label>
+          <label>반응 확인 간격 (분)<input type="number" name="harvestIntervalMin" min="1" max="1440" value="${Number(c.harvestIntervalMin)}"></label>
+          <label>PR 하나에 올릴 의견 수<input type="number" name="inlineMax" min="0" max="50" value="${Number(c.inlineMax)}"></label>
+          <label>AI 답을 기다리는 시간 (초)<input type="number" name="timeoutSec" min="30" max="3600" value="${Number(c.timeoutSec)}"></label>
+        </div></details>
+      </section>
       <div class="savebar"><div class="savebar-in">
         <span class="msg" id="save-msg" role="status"></span>
-        <button class="btn ghost" type="button" data-action="reset-settings" id="reset-btn">저장한 값으로 되돌리기</button>
-        <button class="btn primary" type="submit" id="save-btn">설정 저장</button>
+        <button class="btn quiet" type="button" data-action="reset-settings" id="reset-btn">바꾼 것 되돌리기</button>
+        <button class="btn main" type="submit" id="save-btn">저장</button>
       </div></div>
     </form>
-    <h2>환경 점검</h2>
-    <div id="doctor-box">${doctor ? renderChecks(doctor) : '<p class="muted">점검 중…</p>'}</div>
-    <p class="btn-row" style="margin-top:8px"><button class="btn ghost" data-action="recheck">다시 점검</button></p>`;
+    <section class="set-section">
+      <h2>연결 상태</h2>
+      <div id="doctor-box">${doctor ? renderChecks(doctor) : '<p class="muted">확인하는 중이에요.</p>'}</div>
+      <p class="actions"><button class="btn" data-action="recheck">다시 확인</button></p>
+    </section>`;
 };
 
 const loadRepoOptions = async (reload = false) => {
@@ -808,21 +860,21 @@ const loadRepoOptions = async (reload = false) => {
     repoOptions = await api('GET', `/api/repos${reload ? '?refresh=1' : ''}`);
   } catch (error) {
     repoOptions = [];
-    toast(`레포 목록을 못 불러왔습니다: ${error.message}`);
+    toast(`저장소 목록을 가져오지 못했어요: ${error.message}`);
   }
   const list = document.getElementById('repo-options');
   if (list) {
-    list.innerHTML = repoOptions.map((r) => `<option value="${esc(r.repo)}">${r.private ? '비공개' : '공개'}, ${ago(r.pushedAt)} push</option>`).join('');
-    document.getElementById('repo-hint').textContent = `내 레포 ${repoOptions.length}개에서 고를 수 있습니다.`;
+    list.innerHTML = repoOptions.map((r) => `<option value="${esc(r.repo)}"></option>`).join('');
+    document.getElementById('repo-hint').innerHTML = `내 저장소 ${repoOptions.length}개 중에서 고를 수 있어요. 목록에 없으면 <button class="btn quiet" type="button" data-action="reload-repos" style="min-height:0;padding:0">다시 불러오기</button>`;
   }
 };
 
-// 화면의 값을 초안에 모은다 — 레포 추가·빼기로 다시 그릴 때 입력 중인 값을 잃지 않게.
+// 화면의 값을 초안에 모은다 — 저장소 추가·빼기로 다시 그릴 때 입력 중인 값을 잃지 않게.
 const collectSettings = () => {
   const form = document.getElementById('settings-form');
   if (!form || !settingsDraft) return;
   const data = new FormData(form);
-  settingsDraft.provider = data.get('provider');
+  settingsDraft.provider = data.get('provider') ?? settingsDraft.provider;
   settingsDraft.modelName = data.get('modelName');
   // 빈 칸을 Number('') === 0 으로 받으면 "0 으로 바꿈" 이 된다. 빈 칸은 NaN 으로 두어 서버가 거절하게 한다.
   for (const key of ['sweepIntervalMin', 'harvestIntervalMin', 'inlineMax', 'timeoutSec']) settingsDraft[key] = String(data.get(key) ?? '').trim() === '' ? NaN : Number(data.get(key));
@@ -837,7 +889,7 @@ const collectSettings = () => {
   });
 };
 
-// 저장한 값과 다른 곳이 몇 군데인지 센다. 레포 한 개는 안에서 몇 개를 바꿨든 한 곳이다.
+// 저장한 값과 다른 곳이 몇 군데인지 센다. 저장소 한 곳은 안에서 몇 개를 바꿨든 한 곳이다.
 const changedRepos = () => {
   const base = new Map(settingsBase.repos.map((repo) => [repo.repo, repo]));
   return new Set(settingsDraft.repos.filter((repo) => {
@@ -853,47 +905,47 @@ const settingsChangeCount = () => {
 };
 const settingsDirty = () => document.getElementById('settings-form') !== null && settingsChangeCount() > 0;
 
-// 입력할 때마다: 초안 갱신 → 저장 막대·레포 카드 표시 갱신. 다시 그리지 않아 포커스가 그대로다.
+// 입력할 때마다: 초안 갱신 → 저장 막대·저장소 카드 표시 갱신. 다시 그리지 않아 포커스가 그대로다.
 const syncSettings = () => {
   collectSettings();
   const n = settingsChangeCount();
   const msg = document.getElementById('save-msg');
   if (!msg) return;
   const publishOn = settingsDraft.repos.filter((repo) => repo.publish && !settingsBase.repos.find((old) => old.repo === repo.repo && old.publish));
-  msg.className = `msg${n ? ' dirty' : ''}`;
-  msg.textContent = n ? `저장 안 한 변경 ${n}곳${publishOn.length ? ` · 바로 게시를 새로 켠 레포 ${publishOn.length}개` : ''}` : '변경 없음';
+  msg.className = `msg${n ? ' changed' : ''}`;
+  msg.textContent = n ? `저장하지 않은 변경이 ${n}곳 있어요.${publishOn.length ? ` 바로 올리기를 새로 켠 저장소가 ${publishOn.length}곳이에요.` : ''}` : '바꾼 것이 없어요.';
   document.getElementById('save-btn').disabled = n === 0;
   document.getElementById('reset-btn').disabled = n === 0;
   const dirtyRepos = changedRepos();
   document.querySelectorAll('.repo-card').forEach((card) => {
     const repo = settingsDraft.repos[Number(card.dataset.index)];
-    card.classList.toggle('dirty', dirtyRepos.has(repo.repo));
-    card.querySelector('.chg').hidden = !dirtyRepos.has(repo.repo);
-    card.querySelector('[data-badges]').innerHTML = repoBadges(repo);
+    card.classList.toggle('changed', dirtyRepos.has(repo.repo));
+    card.querySelector('.changed-mark').hidden = !dirtyRepos.has(repo.repo);
+    card.querySelector('[data-say]').innerHTML = repoSay(repo);
   });
   const total = document.getElementById('repo-total');
-  if (total) total.textContent = `${settingsDraft.repos.length}개 · 바로 게시 ${settingsDraft.repos.filter((repo) => repo.publish).length}개`;
+  if (total) total.textContent = settingsDraft.repos.length ? `${settingsDraft.repos.length}곳` : '';
 };
 const rerenderSettings = () => { setHtml(document.getElementById('main'), renderSettings(), true); syncSettings(); };
 
-/* ── 게시 미리보기 ── */
+/* ── 올리기 전에 확인하기 ── */
 const dialog = document.getElementById('preview');
 let previewId = null;
 const openPreview = async (id) => {
   previewId = id;
   const bodyEl = document.getElementById('preview-body');
   const publishBtn = document.getElementById('preview-publish');
-  bodyEl.innerHTML = '<p class="muted">지금 PR 상태로 게시 내용을 계산하는 중…</p>';
+  bodyEl.innerHTML = '<p class="muted">지금 PR 상태에 맞춰 올릴 내용을 만드는 중이에요.</p>';
   publishBtn.disabled = true;
   dialog.showModal();
   try {
     const p = await api('GET', `/api/reviews/${id}/preview`);
     bodyEl.innerHTML = `
-      ${p.stale ? `<div class="warn-box">리뷰 뒤 새 커밋이 올라와 게시할 수 없습니다 (${esc(p.headSha.slice(0, 7))}). "다시 리뷰" 로 새 커밋을 리뷰하세요.</div>` : ''}
-      <h3 style="margin-top:0">리뷰 본문</h3><div class="preview-body">${esc(p.body)}</div>
-      <h3>줄에 다는 코멘트 ${p.comments.length}건</h3>
-      ${p.comments.length ? p.comments.map((c) => `<div class="preview-comment"><span class="loc">${esc(c.path)}:${c.line}</span><p>${esc(c.body)}</p></div>`).join('') : '<p class="muted small">줄에 붙일 수 있는 지적이 없어 전부 본문 목록으로 갑니다.</p>'}
-      ${p.droppedCount ? `<p class="muted small">우선순위가 낮은 ${p.droppedCount}건은 게시하지 않습니다 (상한 ${state.config.inlineMax}건, 설정에서 바꿀 수 있음).</p>` : ''}`;
+      ${p.stale ? '<div class="notice bad"><p>리뷰한 뒤에 PR 이 또 바뀌어서 이대로는 올릴 수 없어요. "다시 리뷰" 를 눌러 새 내용으로 리뷰해 주세요.</p></div>' : ''}
+      <h3>PR 에 남길 요약</h3><div class="preview-body">${esc(p.body)}</div>
+      <h3>코드 줄마다 남길 의견 ${p.comments.length}개</h3>
+      ${p.comments.length ? p.comments.map((c) => `<div class="preview-comment"><span class="where">${esc(c.path)} ${Number(c.line)}번째 줄</span><p>${esc(c.body)}</p></div>`).join('') : '<p class="muted">줄에 붙일 수 있는 의견이 없어서 모두 요약에 넣었어요.</p>'}
+      ${p.droppedCount ? `<p class="muted">덜 중요한 의견 ${Number(p.droppedCount)}개는 올리지 않아요. 몇 개까지 올릴지는 설정의 고급 설정에서 바꿀 수 있어요.</p>` : ''}`;
     publishBtn.disabled = p.stale;
   } catch (error) {
     bodyEl.innerHTML = `<p class="error-text">${esc(error.message)}</p>`;
@@ -905,14 +957,14 @@ document.getElementById('preview-publish').addEventListener('click', async (even
   try {
     await api('POST', `/api/reviews/${previewId}/publish`);
     dialog.close();
-    toast('게시를 대기열에 넣었습니다. 몇 초 뒤 "게시함" 으로 바뀝니다.');
+    toast('GitHub 에 올리는 중이에요. 몇 초 뒤 "GitHub 에서 보기" 로 바뀌어요.');
     await refresh();
   } catch (error) { toast(error.message); event.target.disabled = false; }
 });
 
 /* ── 이벤트 ── */
 const goTab = (next) => {
-  if (tab === 'settings' && next !== 'settings' && settingsDirty() && !confirm('저장하지 않은 설정 변경이 있습니다. 버리고 나갈까요?')) {
+  if (tab === 'settings' && next !== 'settings' && settingsDirty() && !confirm('저장하지 않은 변경이 있어요. 저장하지 않고 나갈까요?')) {
     if (location.hash.slice(1) !== 'settings') location.hash = 'settings';
     return;
   }
@@ -940,7 +992,7 @@ main.addEventListener('toggle', (event) => {
   if (el.dataset?.repo) repoOpen.set(el.dataset.repo, el.open);
 }, true);
 
-// 레포 검색창의 Enter 는 설정 저장이 아니라 "추가" 다.
+// 저장소 입력칸의 Enter 는 설정 저장이 아니라 "추가" 다.
 main.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && event.target.id === 'new-repo') {
     event.preventDefault();
@@ -950,7 +1002,7 @@ main.addEventListener('keydown', (event) => {
 
 main.addEventListener('input', (event) => {
   const el = event.target;
-  if (el.id === 'filter-q') { filters.q = el.value; setHtml(document.getElementById('review-list'), renderReviewList()); return; }
+  if (el.id === 'filter-q') { filters.q = el.value; setHtml(document.getElementById('review-list'), renderReviewList()); syncChips(); return; }
   if (el.id === 'repo-filter') {
     const q = el.value.trim().toLowerCase();
     document.querySelectorAll('.repo-card').forEach((card) => { card.hidden = q !== '' && !card.dataset.repo.toLowerCase().includes(q); });
@@ -969,11 +1021,11 @@ main.addEventListener('click', async (event) => {
   if (!el || el.tagName === 'INPUT') return;
   const action = el.dataset.action;
   try {
-    if (action === 'sweep') { const r = await api('POST', '/api/sweep'); toast(r.queued ? 'PR 찾기를 대기열에 넣었습니다.' : '이미 대기 중입니다.'); }
-    if (action === 'harvest') { const r = await api('POST', '/api/harvest'); toast(r.queued ? '반응 걷기를 대기열에 넣었습니다.' : '이미 대기 중입니다.'); }
+    if (action === 'sweep') { const r = await api('POST', '/api/sweep'); toast(r.queued ? '새 PR 을 확인할게요.' : '이미 확인하고 있어요.'); }
+    if (action === 'harvest') { const r = await api('POST', '/api/harvest'); toast(r.queued ? 'GitHub 반응을 확인할게요.' : '이미 확인하고 있어요.'); }
     if (action === 'pause') { await api('POST', '/api/pause', { paused: !state.config.paused }); }
     if (action === 'preview') { await openPreview(el.dataset.id); return; }
-    if (action === 'rereview') { const r = await api('POST', `/api/reviews/${el.dataset.id}/rereview`); toast(r.queued ? '다시 리뷰를 대기열에 넣었습니다.' : '같은 리뷰가 이미 대기 중입니다.'); }
+    if (action === 'rereview') { const r = await api('POST', `/api/reviews/${el.dataset.id}/rereview`); toast(r.queued ? '다시 리뷰할게요. 홈에서 진행 상황을 볼 수 있어요.' : '이미 리뷰를 기다리고 있어요.'); }
     if (action === 'filter-repo') { filters.repo = el.dataset.repo; filters.status = ''; filters.q = ''; return; }
     if (action === 'filter-todo') { filters.repo = ''; filters.status = 'todo'; filters.q = ''; return; }
     if (action === 'chip') { filters.status = el.dataset.value; syncChips(); setHtml(document.getElementById('review-list'), renderReviewList()); return; }
@@ -981,8 +1033,8 @@ main.addEventListener('click', async (event) => {
       el.disabled = true;
       await loadDoctor(true);
       const box = document.getElementById('doctor-box');
-      if (box) box.innerHTML = renderChecks(doctor); else render(true);
-      toast(doctor && !doctor.some((r) => r.level === 'fail') ? '환경 점검을 통과했습니다.' : '막힌 항목의 안내를 따라 주세요.');
+      if (box) box.innerHTML = doctor ? renderChecks(doctor) : '<p class="muted">연결 상태를 확인하지 못했어요.</p>'; else render(true);
+      toast(doctor && !doctor.some((r) => r.level === 'fail') ? '연결에 문제가 없어요.' : '막힌 항목 아래 안내를 따라 주세요.');
       el.disabled = false;
       return;
     }
@@ -990,32 +1042,32 @@ main.addEventListener('click', async (event) => {
       const reason = reasonDrafts.get(el.dataset.id) ?? document.querySelector(`textarea[data-reason="${CSS.escape(el.dataset.id)}"]`)?.value ?? '';
       await api('POST', `/api/findings/${el.dataset.id}/judge`, { decision: el.dataset.decision, reason });
       reasonDrafts.delete(el.dataset.id);
-      toast(el.dataset.decision === 'ACCEPTED' ? '채택으로 기록했습니다.' : '기각으로 기록했습니다.');
+      toast(el.dataset.decision === 'ACCEPTED' ? '맞는 의견으로 기록했어요.' : '괜찮은 것으로 기록했어요. 봇이 기억해요.');
     }
     if (action === 'reload-repos') { await loadRepoOptions(true); return; }
     if (action === 'add-repo') {
       collectSettings();
       const input = document.getElementById('new-repo');
       let name = input.value.trim().replace(/^https:\/\/github\.com\//, '').replace(/\/$/, '');
-      // 이름만 치면(owner 없이) 내 레포 목록에서 찾아 맞춘다.
+      // 이름만 치면(owner 없이) 내 저장소 목록에서 찾아 맞춘다.
       if (name && !name.includes('/')) {
         const found = (repoOptions ?? []).filter((r) => r.repo.split('/')[1].toLowerCase() === name.toLowerCase());
         if (found.length === 1) name = found[0].repo;
-        else if (found.length > 1) { toast(`같은 이름이 여러 개입니다: ${found.map((r) => r.repo).join(', ')}. owner 까지 적어 주세요.`); return; }
+        else if (found.length > 1) { toast(`같은 이름이 여러 개예요: ${found.map((r) => r.repo).join(', ')}. 앞부분까지 적어 주세요.`); return; }
       }
-      if (!/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(name)) { toast('owner/repo 형식으로 입력하거나 목록에서 고르세요.'); return; }
-      if (settingsDraft.repos.some((repo) => repo.repo.toLowerCase() === name.toLowerCase())) { toast('이미 있는 레포입니다.'); return; }
+      if (!/^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(name)) { toast('목록에서 저장소를 골라 주세요.'); return; }
+      if (settingsDraft.repos.some((repo) => repo.repo.toLowerCase() === name.toLowerCase())) { toast('이미 고른 저장소예요.'); return; }
       settingsDraft.repos.push({ repo: name, autoReview: true, publish: false, target: 'all', skipDrafts: true, learning: true, rulesFiles: [...DEFAULT_RULES], extraRules: '' });
       repoOpen.set(name, true);
       rerenderSettings();
-      toast(`${name} 을 추가했습니다. "설정 저장" 을 눌러야 적용됩니다.`);
+      toast(`${name} 을 추가했어요. 아래 "저장" 을 눌러야 적용돼요.`);
       return;
     }
     if (action === 'remove-repo') {
       collectSettings();
       const [removed] = settingsDraft.repos.splice(Number(el.dataset.index), 1);
       rerenderSettings();
-      toast(`${removed.repo} 을 뺐습니다. "설정 저장" 을 눌러야 적용됩니다.`);
+      toast(`${removed.repo} 을 뺐어요. 아래 "저장" 을 눌러야 적용돼요.`);
       return;
     }
     if (action === 'reset-settings') { settingsDraft = JSON.parse(JSON.stringify(state.config)); rerenderSettings(); return; }
@@ -1031,13 +1083,14 @@ main.addEventListener('change', async (event) => {
   if (el.id === 'filter-repo') {
     filters.repo = el.value;
     setHtml(document.getElementById('review-list'), renderReviewList());
+    syncChips();
     return;
   }
   if (el.closest('#settings-form') && el.id !== 'new-repo') { syncSettings(); return; }
   if (el.dataset.action !== 'exclude') return;
   try {
     await api('POST', `/api/findings/${el.dataset.id}/exclude`, { excluded: !el.checked });
-    toast(el.checked ? '학습에 다시 씁니다.' : '학습에서 뺐습니다.');
+    toast(el.checked ? '다시 기억할게요.' : '이제 기억하지 않을게요.');
     await refresh();
   } catch (error) { toast(error.message); }
 });
@@ -1048,9 +1101,9 @@ main.addEventListener('submit', async (event) => {
     if (event.target.id === 'review-form') {
       const data = new FormData(event.target);
       const publish = data.get('publish') === 'on';
-      if (publish && !confirm('리뷰가 끝나면 확인 없이 PR 에 게시합니다. 진행할까요?')) return;
+      if (publish && !confirm('리뷰가 끝나면 확인하지 않고 바로 GitHub 에 올려요. 괜찮을까요?')) return;
       const r = await api('POST', '/api/review', { pr: data.get('pr'), provider: data.get('provider') || undefined, publish });
-      toast(r.queued ? '리뷰를 대기열에 넣었습니다. 대시보드에서 진행 상황을 볼 수 있습니다.' : '같은 리뷰가 이미 대기 중입니다.');
+      toast(r.queued ? '리뷰를 시작할게요. 홈에서 진행 상황을 볼 수 있어요.' : '이미 리뷰를 기다리고 있어요.');
       event.target.reset();
       document.activeElement?.blur();
       await refresh();
@@ -1058,9 +1111,9 @@ main.addEventListener('submit', async (event) => {
     if (event.target.id === 'settings-form') {
       collectSettings();
       const turningOn = settingsDraft.repos.filter((repo) => repo.publish && !state.config.repos.find((old) => old.repo === repo.repo && old.publish));
-      if (turningOn.length && !confirm(`${turningOn.map((r) => r.repo).join(', ')} 은 리뷰가 끝나면 확인 없이 게시됩니다. 저장할까요?`)) return;
+      if (turningOn.length && !confirm(`${turningOn.map((r) => r.repo).join(', ')} 은 리뷰가 끝나면 확인하지 않고 바로 GitHub 에 올려요. 저장할까요?`)) return;
       await api('PUT', '/api/config', { ...settingsDraft, paused: state.config.paused });
-      toast('설정을 저장했습니다.');
+      toast('저장했어요.');
       settingsDraft = null;
       renderedTab = null;
       await refresh();
@@ -1075,7 +1128,7 @@ setInterval(() => {
 
 loadDoctor().then(() => { if (tab === 'dashboard') render(true); });
 refresh();
-// 설정 탭은 render 가 상단 상태 표시만 갱신하고 본문은 건드리지 않는다.
+// 설정 탭은 render 가 상단 상태만 갱신하고 본문은 건드리지 않는다.
 setInterval(() => { if (!dialog.open) refresh(); }, 4000);
 </script>
 </body>

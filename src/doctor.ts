@@ -33,8 +33,6 @@ const run = async (command: string, args: string[]): Promise<{ ok: boolean; out:
   }
 };
 
-const firstLine = (text: string): string => text.split('\n')[0]?.trim() ?? '';
-
 // codex 는 사용자 config 를 끄고 띄우므로(MCP 서버 기동 방지) 모델을 따로 넘겨야 한다. 각자 config 의 모델을 쓴다.
 export const readCodexConfigModel = (): string | undefined => {
   const codexHome = process.env.CODEX_HOME ?? join(process.env.HOME ?? homedir(), '.codex');
@@ -51,13 +49,13 @@ export const readCodexConfigModel = (): string | undefined => {
 const checkNode = (): CheckResult => {
   const major = Number(process.versions.node.split('.')[0]);
   return major >= MIN_NODE_MAJOR
-    ? { id: 'node', label: 'Node.js', level: 'ok', detail: `v${process.versions.node}` }
+    ? { id: 'node', label: '실행 도구', level: 'ok', detail: `Node.js ${process.versions.node}` }
     : {
         id: 'node',
-        label: 'Node.js',
+        label: '실행 도구',
         level: 'fail',
-        detail: `v${process.versions.node} — ${MIN_NODE_MAJOR} 이상이 필요합니다`,
-        fix: 'https://nodejs.org 에서 LTS 를 설치하거나 `nvm use` 를 실행하세요 (.nvmrc 포함)',
+        detail: `Node.js ${process.versions.node} 은 오래된 버전이에요. ${MIN_NODE_MAJOR} 이상이 필요해요.`,
+        fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요. 직접 하려면 https://nodejs.org 에서 설치하세요.',
       };
 };
 
@@ -67,24 +65,24 @@ const checkGh = async (): Promise<CheckResult[]> => {
     return [
       {
         id: 'gh',
-        label: 'GitHub CLI (gh)',
+        label: 'GitHub 연결 도구',
         level: 'fail',
-        detail: '설치되어 있지 않습니다',
-        fix: 'https://cli.github.com 에서 설치한 뒤 `gh auth login`',
+        detail: '아직 설치되지 않았어요.',
+        fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요. 직접 하려면 https://cli.github.com 에서 설치한 뒤 `gh auth login`.',
       },
     ];
   }
   const user = await run('gh', ['api', 'user', '--jq', '.login']);
   return [
-    { id: 'gh', label: 'GitHub CLI (gh)', level: 'ok', detail: firstLine(version.out) },
+    { id: 'gh', label: 'GitHub 연결 도구', level: 'ok', detail: '설치되어 있어요.' },
     user.ok
-      ? { id: 'gh-auth', label: 'GitHub 로그인', level: 'ok', detail: `${user.out} 계정으로 리뷰를 게시합니다` }
+      ? { id: 'gh-auth', label: 'GitHub 로그인', level: 'ok', detail: `${user.out} 계정으로 리뷰를 올려요.` }
       : {
           id: 'gh-auth',
           label: 'GitHub 로그인',
           level: 'fail',
-          detail: '로그인되어 있지 않습니다',
-          fix: '`gh auth login` 을 실행하세요',
+          detail: '로그인되어 있지 않아요.',
+          fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요. 직접 하려면 `gh auth login`.',
         },
   ];
 };
@@ -94,27 +92,27 @@ const checkCodex = async (): Promise<CheckResult> => {
   if (status.out === 'ENOENT') {
     return {
       id: 'codex',
-      label: 'codex CLI',
+      label: 'ChatGPT 연결',
       level: 'warn',
-      detail: '설치되어 있지 않습니다 (claude 만 써도 됩니다)',
-      fix: '`npm i -g @openai/codex` 후 `codex login`',
+      detail: '연결되어 있지 않아요. Claude 를 쓴다면 괜찮아요.',
+      fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요.',
     };
   }
   if (!status.ok) {
     return {
       id: 'codex',
-      label: 'codex CLI',
+      label: 'ChatGPT 연결',
       level: 'warn',
-      detail: '로그인되어 있지 않습니다',
-      fix: '`codex login` 을 실행하세요',
+      detail: '로그인되어 있지 않아요. Claude 를 쓴다면 괜찮아요.',
+      fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요. 직접 하려면 `codex login`.',
     };
   }
   const model = readCodexConfigModel();
   return {
     id: 'codex',
-    label: 'codex CLI',
+    label: 'ChatGPT 연결',
     level: 'ok',
-    detail: `${firstLine(status.out)}${model ? `, 기본 모델 ${model}` : ''}`,
+    detail: `연결되어 있어요.${model ? ` (기본 모델: ${model})` : ''}`,
   };
 };
 
@@ -123,10 +121,10 @@ const checkClaude = async (): Promise<CheckResult> => {
   if (status.out === 'ENOENT') {
     return {
       id: 'claude',
-      label: 'claude CLI',
+      label: 'Claude 연결',
       level: 'warn',
-      detail: '설치되어 있지 않습니다 (codex 만 써도 됩니다)',
-      fix: '`npm i -g @anthropic-ai/claude-code` 후 `claude` 로 로그인',
+      detail: '연결되어 있지 않아요. ChatGPT 를 쓴다면 괜찮아요.',
+      fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요.',
     };
   }
   let loggedIn = status.ok;
@@ -136,13 +134,13 @@ const checkClaude = async (): Promise<CheckResult> => {
     // 구버전은 JSON 이 아니다 — 종료 코드만 믿는다.
   }
   return loggedIn
-    ? { id: 'claude', label: 'claude CLI', level: 'ok', detail: '로그인됨' }
+    ? { id: 'claude', label: 'Claude 연결', level: 'ok', detail: '연결되어 있어요.' }
     : {
         id: 'claude',
-        label: 'claude CLI',
+        label: 'Claude 연결',
         level: 'warn',
-        detail: '로그인되어 있지 않습니다',
-        fix: '`claude` 를 한 번 실행해 로그인하세요',
+        detail: '로그인되어 있지 않아요. ChatGPT 를 쓴다면 괜찮아요.',
+        fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요. 직접 하려면 `claude auth login`.',
       };
 };
 
@@ -153,10 +151,10 @@ export const runDoctor = async (): Promise<CheckResult[]> => {
   if (codex.level !== 'ok' && claude.level !== 'ok') {
     results.push({
       id: 'model',
-      label: '리뷰 모델',
+      label: '리뷰할 AI',
       level: 'fail',
-      detail: 'codex 와 claude 중 하나는 로그인되어 있어야 합니다',
-      fix: '위 codex 또는 claude 항목의 안내를 따르세요',
+      detail: 'ChatGPT 나 Claude 중 하나는 연결되어 있어야 리뷰할 수 있어요.',
+      fix: '`시작하기.command` 를 다시 열면 설치와 로그인을 차례로 안내해요.',
     });
   }
   return results;

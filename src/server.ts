@@ -1,3 +1,4 @@
+import './tool-path.js';
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
@@ -302,7 +303,7 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
 
   if (method === 'PUT' && url.pathname === '/api/config') {
     store.setConfig(parseConfig(body));
-    store.log('info', '설정을 저장했습니다.');
+    store.log('info', '설정을 저장했어요.');
     store.save();
     sendJson(response, 200, { ok: true });
     return;
@@ -332,7 +333,7 @@ const route = async (request: IncomingMessage, response: ServerResponse): Promis
   }
   if (method === 'POST' && url.pathname === '/api/pause') {
     store.setConfig({ ...store.state.config, paused: body.paused === true });
-    store.log('info', store.state.config.paused ? '자동 실행을 멈췄습니다.' : '자동 실행을 다시 켰습니다.');
+    store.log('info', store.state.config.paused ? '자동 확인을 멈췄어요.' : '자동 확인을 다시 켰어요.');
     store.save();
     sendJson(response, 200, { ok: true });
     return;

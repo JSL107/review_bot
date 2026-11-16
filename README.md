@@ -2,7 +2,11 @@
 
 내 컴퓨터에서 도는 GitHub PR 리뷰 봇입니다. 이미 쓰고 있는 ChatGPT(`codex`)나 Claude(`claude`) 구독으로 PR 을 리뷰하고, 레포가 적어 둔 규칙과 내가 기각한 지적에서 배워 다음 리뷰를 고칩니다. API 키, 서버, 데이터베이스가 필요 없습니다.
 
-## 빠른 시작
+## 개발자가 아니라면
+
+Mac 에서 [내려받기(zip)](https://github.com/JSL107/review_bot/archive/refs/heads/main.zip) 후 압축을 풀고, 폴더 안의 **시작하기.command** 를 더블클릭하세요. 필요한 프로그램 설치와 로그인을 차례로 안내하고, 끝나면 브라우저에 review_bot 이 열립니다. 관리자 비밀번호는 필요 없습니다. 그림이 있는 자세한 안내는 [docs/index.html](docs/index.html) 에 있습니다.
+
+## 빠른 시작 (개발자)
 
 필요한 것은 세 가지입니다.
 

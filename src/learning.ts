@@ -279,7 +279,7 @@ export const harvest = async (store: Store): Promise<HarvestResult> => {
       }
     } catch (error: unknown) {
       result.failed += 1;
-      store.log('warn', `${key} 수확 실패: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
+      store.log('warn', `${key} 의 반응을 확인하지 못했어요: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
     }
   }
   return result;

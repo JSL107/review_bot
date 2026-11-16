@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>review_bot 시작하기</title>
+<meta name="description" content="PR 을 대신 읽고 의견을 남겨 주는 리뷰 봇. 내 컴퓨터에서 쓰던 ChatGPT 나 Claude 구독으로 돌아가요.">
+<style>
+:root {
+  --paper: #F2F3EF;
+  --surface: #FAFBF8;
+  --ink: #1C2420;
+  --ink-2: #57605A;
+  --line: #D8DCD4;
+  --marker: #F2CF4A;
+  --danger: #A3303B;
+  --good: #2E7650;
+  --font: "Apple SD Gothic Neo", "Pretendard", -apple-system, "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #171C19; --surface: #1E2521; --ink: #E5EAE5; --ink-2: #A2ACA5; --line: #313A35; --marker: #C7A63A; --danger: #EA8C95; --good: #62B98D; }
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; color: var(--ink); background: var(--paper); font: 17px/1.75 var(--font); word-break: keep-all; overflow-wrap: anywhere; }
+a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+code, kbd { font-family: var(--mono); font-size: 0.86em; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+header.top { border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; padding-bottom: 14px; }
+.brand { font-weight: 800; letter-spacing: -0.02em; }
+header.top a { font-size: 15px; color: var(--ink-2); }
+
+.hero { padding: 56px 0 28px; }
+.hero h1 { font-size: 38px; line-height: 1.3; letter-spacing: -0.03em; margin: 0 0 18px; }
+.hl { background: linear-gradient(transparent 55%, var(--marker) 55%); padding: 0 2px; }
+.hero p { font-size: 19px; color: var(--ink-2); margin: 0 0 26px; max-width: 34em; }
+.download { display: inline-flex; align-items: center; gap: 10px; background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 700; padding: 13px 22px; border-radius: 6px; font-size: 17px; }
+.download:hover { opacity: .9; }
+.download-note { display: block; margin-top: 10px; font-size: 15px; color: var(--ink-2); }
+
+figure { margin: 36px 0 0; }
+figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+figcaption { font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+
+section { padding: 44px 0 4px; }
+h2 { font-size: 25px; letter-spacing: -0.02em; line-height: 1.35; margin: 0 0 14px; }
+h3 { font-size: 18px; margin: 26px 0 6px; }
+p { margin: 0 0 14px; }
+.muted { color: var(--ink-2); }
+
+.needs { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+.needs li { display: grid; grid-template-columns: 170px 1fr; gap: 4px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.needs b { font-weight: 700; }
+
+/* 설치는 실제 순서가 있는 단계라 번호를 붙인다 */
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.steps > li { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 0 14px; padding: 22px 0; border-top: 1px solid var(--line); }
+.steps > li::before { content: counter(step); width: 34px; height: 34px; border-radius: 50%; background: var(--marker); color: #1C2420; display: grid; place-items: center; font-weight: 800; }
+.steps h3 { margin: 4px 0 6px; }
+.steps p:last-child { margin-bottom: 0; }
+.term { background: #1C2420; color: #E5EAE5; border-radius: 6px; padding: 14px 16px; font: 14px/1.7 var(--mono); margin: 12px 0; overflow-x: auto; white-space: pre; }
+.term .ok { color: #7ED3A4; }
+.term .dim { color: #8A948D; }
+.caution { border-left: 4px solid var(--danger); padding: 4px 0 4px 16px; margin: 14px 0; }
+
+.flow { margin: 0; padding: 0 0 0 20px; }
+.flow li { margin: 0 0 10px; padding-left: 4px; }
+
+details { border-top: 1px solid var(--line); }
+details:last-of-type { border-bottom: 1px solid var(--line); }
+details > summary { cursor: pointer; padding: 16px 0; font-weight: 700; list-style: none; display: grid; grid-template-columns: 22px 1fr; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: "+"; color: var(--ink-2); }
+details[open] > summary::before { content: "−"; }
+details > div { padding: 0 0 18px 22px; }
+
+footer { margin-top: 64px; padding: 28px 0 56px; border-top: 1px solid var(--line); font-size: 15px; color: var(--ink-2); }
+
+@media (max-width: 640px) {
+  .wrap { padding: 0 18px; }
+  .hero { padding-top: 36px; }
+  .hero h1 { font-size: 29px; }
+  .hero p { font-size: 17px; }
+  .needs li { grid-template-columns: 1fr; }
+  h2 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><span class="brand">review_bot</span><a href="https://github.com/JSL107/review_bot">GitHub 에서 보기</a></div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>PR 을 대신 읽고<br><span class="hl">고칠 곳을 짚어 주는</span> 리뷰 봇</h1>
+    <p>동료가 올린 코드 변경(PR)을 AI 가 먼저 읽고, 어디를 왜 고치면 좋을지 정리해 드려요. 이미 쓰고 있는 ChatGPT 나 Claude 구독으로 돌아가서 따로 드는 돈이 없어요.</p>
+    <a class="download" href="https://github.com/JSL107/review_bot/archive/refs/heads/main.zip">내려받기 (zip)</a>
+    <span class="download-note">지금은 Mac 에서만 더블클릭으로 설치할 수 있어요. Linux 는 아래 안내를 봐 주세요.</span>
+    <figure>
+      <img src="img/home.jpg" alt="review_bot 홈 화면. 맨 위에 '지금 확인할 것이 7개 있어요' 라고 적혀 있고, 아래에 확인이 필요한 의견, 실패한 리뷰, 올리기 전 리뷰 목록과 각 줄의 버튼이 있다." width="1024" height="606">
+      <figcaption>켜 두면 이런 화면이 브라우저에 떠요. 지금 무엇을 확인하면 되는지 맨 위에 알려 줘요.</figcaption>
+    </figure>
+  </div>
+
+  <section aria-labelledby="what">
+    <h2 id="what">무엇을 해 주나요</h2>
+    <p>지켜볼 저장소를 골라 두면, 새 PR 이 올라올 때마다 봇이 읽고 의견을 정리해요. 의견은 "꼭 고칠 것", "고치면 좋은 것", "테스트가 빠진 곳" 으로 나눠 보여 줘요.</p>
+    <p>결과는 바로 GitHub 에 올라가지 않아요. 먼저 내 화면에서 확인하고, 괜찮을 때 "확인하고 올리기" 를 누르면 PR 에 남아요.</p>
+    <p>봇이 틀린 말을 하면 GitHub 에서 👎 를 누르고 이유를 답글로 남겨 주세요. 같은 종류의 이유가 두 번 쌓이면 봇이 기억하고, 그 저장소에서는 더 이상 같은 말을 하지 않아요.</p>
+  </section>
+
+  <section aria-labelledby="needs">
+    <h2 id="needs">준비물</h2>
+    <ul class="needs">
+      <li><b>Mac</b><span>macOS 가 깔린 컴퓨터. 관리자 비밀번호는 필요 없어요.</span></li>
+      <li><b>GitHub 계정</b><span>리뷰할 저장소를 볼 수 있는 계정이어야 해요.</span></li>
+      <li><b>AI 구독 하나</b><span>ChatGPT Plus 이상, 또는 Claude Pro 이상. 둘 중 하나만 있으면 돼요.</span></li>
+      <li><b>10분</b><span>처음 한 번만 걸려요. 다음부터는 더블클릭 한 번이면 켜져요.</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="install">
+    <h2 id="install">설치하기</h2>
+    <ol class="steps">
+      <li><div>
+        <h3>내려받고 압축 풀기</h3>
+        <p>위의 <b>내려받기</b> 를 누르면 <code>review_bot-main.zip</code> 이 받아져요. 다운로드 폴더에서 더블클릭하면 <code>review_bot-main</code> 폴더가 생겨요. Safari 는 압축을 알아서 풀어 줘요.</p>
+        <p>폴더는 어디에 두어도 괜찮아요. 다만 나중에 다시 켤 때 찾기 쉬운 곳(예: 문서 폴더)으로 옮겨 두면 편해요.</p>
+      </div></li>
+      <li><div>
+        <h3>시작하기.command 열기</h3>
+        <p>폴더 안의 <b>시작하기.command</b> 를 찾아 주세요. 처음 한 번은 Mac 이 "확인되지 않은 개발자" 라며 막을 수 있어요. 그럴 때는 이렇게 열어요.</p>
+        <ol class="flow">
+          <li>파일을 <kbd>control</kbd> 키를 누른 채 클릭하거나, 오른쪽 클릭해요.</li>
+          <li>메뉴에서 <b>열기</b> 를 고르고, 한 번 더 뜨는 창에서도 <b>열기</b> 를 눌러요.</li>
+        </ol>
+        <p class="muted">그래도 안 열리면 시스템 설정 → 개인정보 보호 및 보안 맨 아래의 "그래도 열기" 를 눌러 주세요.</p>
+      </div></li>
+      <li><div>
+        <h3>검은 창의 안내 따라가기</h3>
+        <p>검은 창(터미널)이 열리고, 필요한 것을 하나씩 확인해요. 없는 것은 알아서 설치해요. 사람이 할 일은 로그인 두 번뿐이에요.</p>
+<div class="term" role="img" aria-label="터미널 화면 예시: 1부터 5까지 단계가 나오고, 각 단계에 확인 표시가 붙는다.">review_bot 을 준비할게요.
+
+1/5  실행 도구(Node.js) 확인
+  <span class="ok">✓</span> Node.js 를 설치했어요.
+2/5  GitHub 연결 도구(gh) 확인
+  <span class="ok">✓</span> gh 를 설치했어요.
+3/5  GitHub 로그인
+  <span class="dim">① 아래에 8자리 코드가 나오고, 자동으로 복사돼요.</span>
+  <span class="dim">② Enter 를 누르면 브라우저가 열려요. …</span></div>
+        <p><b>GitHub 로그인</b>: 창에 8자리 코드가 나오면 이미 복사된 상태예요. <kbd>Enter</kbd> 를 누르면 브라우저가 열리니, 코드 칸에 붙여 넣고(<kbd>⌘</kbd> + <kbd>V</kbd>) 승인해 주세요.</p>
+        <p><b>AI 고르기</b>: ChatGPT 를 쓰면 <kbd>1</kbd>, Claude 를 쓰면 <kbd>2</kbd> 를 누르고 <kbd>Enter</kbd>. 브라우저가 열리면 평소 쓰는 계정으로 로그인하면 돼요.</p>
+      </div></li>
+      <li><div>
+        <h3>브라우저에서 첫 화면 보기</h3>
+        <p>준비가 끝나면 브라우저에 review_bot 이 저절로 열려요. 첫 화면이 남은 일을 순서대로 알려 줘요. 리뷰할 저장소를 고르고, PR 하나를 넣어 보면 끝이에요.</p>
+        <figure>
+          <img src="img/first-run.jpg" alt="처음 켰을 때의 화면. '반가워요. 몇 가지만 준비하면 PR 을 대신 읽어 드릴게요' 라는 문장 아래에 연결 확인, 저장소 고르기, 첫 리뷰 받아 보기 세 단계가 있다." width="1024" height="606" loading="lazy">
+          <figcaption>처음 켰을 때의 화면. 첫 단계는 설치하면서 이미 끝나 있어요.</figcaption>
+        </figure>
+      </div></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="daily">
+    <h2 id="daily">매일 쓰는 법</h2>
+    <p><b>시작하기.command</b> 를 더블클릭하면 켜져요. 두 번째부터는 확인만 하고 바로 브라우저를 열어요.</p>
+    <p>검은 창은 review_bot 이 돌아가는 동안 열어 두어야 해요. 창을 닫으면 꺼지고, 브라우저 화면에 "꺼져 있어요" 라고 나와요. 다시 쓰려면 또 더블클릭하면 돼요.</p>
+    <h3>리뷰가 PR 에 올라가기까지</h3>
+    <ol class="flow">
+      <li>새 PR 이 올라오면 봇이 알아서 읽어요. 직접 넣고 싶으면 "리뷰 기록" 화면에 PR 주소를 붙여 넣어요.</li>
+      <li>홈에 "올리기 전" 으로 나타나면 <b>확인하고 올리기</b> 를 눌러요. 어떤 의견이 어느 코드 줄에 붙을지 미리 보여 줘요.</li>
+      <li>괜찮으면 <b>이대로 올리기</b>. 내 GitHub 계정 이름으로 PR 에 남아요.</li>
+      <li>올라간 의견에 👍 나 👎 가 달리면 봇이 30분마다 확인해서 성적에 반영해요.</li>
+    </ol>
+    <p class="caution">설정에서 저장소마다 "확인하지 않고 바로 올리기" 를 켤 수 있어요. 켜면 사람이 보기 전에 의견이 올라가요. 결과를 몇 번 보고 믿을 만할 때 켜는 것을 권해요.</p>
+  </section>
+
+  <section aria-labelledby="safe">
+    <h2 id="safe">안심하고 써도 되나요</h2>
+    <details><summary>내 코드는 어디로 가나요?</summary><div>
+      <p>review_bot 은 내 컴퓨터에서만 돌아가요. 리뷰할 때는 PR 의 바뀐 부분을 내가 고른 AI(ChatGPT 나 Claude)에 보내요. 평소에 그 서비스에 코드를 붙여 넣는 것과 같은 길이에요. 회사 코드라면 회사가 그 AI 사용을 허용하는지 먼저 확인해 주세요.</p>
+      <p><code>.env</code> 처럼 비밀번호가 들어 있을 만한 파일은 내용을 보내지 않아요.</p>
+    </div></details>
+    <details><summary>비밀번호를 어디에 저장하나요?</summary><div>
+      <p>review_bot 은 비밀번호를 받지도 저장하지도 않아요. GitHub 와 AI 로그인은 각 서비스의 공식 화면에서 하고, 로그인 정보는 각 연결 도구가 내 컴퓨터에 보관해요. GitHub 와 Claude 는 Mac 의 키체인에, ChatGPT 는 홈 폴더의 <code>.codex</code> 폴더에 둬요.</p>
+    </div></details>
+    <details><summary>다른 사이트가 이 봇을 몰래 움직일 수 있나요?</summary><div>
+      <p>review_bot 화면은 내 컴퓨터 안에서만 열리고, 다른 웹사이트에서 보낸 요청은 거절해요. AI 도 내 컴퓨터의 다른 파일을 읽을 수 없게 막아 둔 채로 실행해요.</p>
+    </div></details>
+    <details><summary>설치한 것을 지우고 싶어요</summary><div>
+      <p><code>review_bot-main</code> 폴더를 휴지통에 넣고, 홈 폴더의 숨김 폴더 <code>.review_bot</code> 도 지우면 끝이에요. 숨김 폴더는 Finder 에서 <kbd>⌘</kbd> + <kbd>shift</kbd> + <kbd>.</kbd> 을 누르면 보여요.</p>
+    </div></details>
+  </section>
+
+  <section aria-labelledby="stuck">
+    <h2 id="stuck">막혔을 때</h2>
+    <details><summary>더블클릭했더니 글자가 가득한 편집기가 열려요</summary><div>
+      <p>파일에 실행 권한이 빠진 경우예요. 응용 프로그램 → 유틸리티 → <b>터미널</b> 을 열고, <code>bash</code> 와 띄어쓰기 한 칸을 입력한 다음 시작하기.command 파일을 터미널 창으로 끌어다 놓고 <kbd>Enter</kbd> 를 눌러 주세요.</p>
+    </div></details>
+    <details><summary>검은 창에 "멈췄어요" 가 나왔어요</summary><div>
+      <p>바로 위 줄에 이유가 적혀 있어요. 대부분 인터넷 연결이나 로그인 문제라서, 창을 닫고 시작하기.command 를 다시 열면 멈춘 곳부터 이어서 해요. 설치 기록은 <code>~/.review_bot/install.log</code> 에 남아요.</p>
+    </div></details>
+    <details><summary>리뷰가 "리뷰 실패" 로 끝나요</summary><div>
+      <p>가장 흔한 이유는 AI 로그인이 풀렸거나 이번 달 사용량을 다 쓴 경우예요. 시작하기.command 를 다시 열면 로그인 상태를 확인해 줘요. 화면의 실패 줄에도 무엇을 하면 되는지 적혀 있어요.</p>
+    </div></details>
+    <details><summary>저장소 목록에 우리 회사 저장소가 없어요</summary><div>
+      <p>GitHub 에 로그인한 계정이 그 저장소를 볼 수 있어야 해요. 회사 조직이 외부 앱 접근을 막아 둔 경우도 있으니, 조직 관리자에게 "GitHub CLI 접근을 허용해 달라" 고 요청해 주세요.</p>
+    </div></details>
+    <details><summary>Windows 나 Linux 에서 쓰고 싶어요</summary><div>
+      <p>Linux 에서는 터미널에서 <code>bash 시작하기.command</code> 로 똑같이 설치할 수 있어요. Windows 는 아직 더블클릭 설치를 지원하지 않아요. 개발자라면 <a href="https://github.com/JSL107/review_bot#readme">README</a> 의 직접 설치 방법을 따라 주세요.</p>
+    </div></details>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  review_bot 은 개인이 만든 오픈소스 도구예요. 코드와 개발자용 설명은 <a href="https://github.com/JSL107/review_bot">GitHub</a> 에 있어요.
+</div></footer>
+</body>
+</html>

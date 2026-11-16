@@ -66,7 +66,7 @@ export const runReview = async ({
   store.save();
 
   try {
-    progress(`${ref.repo}#${ref.number} 조회 중…`);
+    progress('PR 내용을 가져오는 중이에요.');
     const snapshot = await fetchConsistentSnapshot(ref);
     const { detail, diff } = snapshot;
     record.title = detail.title;
@@ -86,7 +86,7 @@ export const runReview = async ({
     record.learnedCategories = learned.categories;
 
     progress(
-      `${provider} 로 리뷰 중… (규칙 ${rules.used.length > 0 ? rules.used.join(', ') : '없음'} · 학습 규약 ${learned.categories.length > 0 ? learned.categories.join(', ') : '없음'})`,
+      `AI 가 코드를 읽고 있어요.${rules.used.length > 0 ? ` 저장소 규칙(${rules.used.join(', ')})을 함께 봐요.` : ''}${learned.categories.length > 0 ? ' 전에 틀렸던 의견도 기억하고 있어요.' : ''}`,
     );
     // 규약은 diff 뒤에 붙인다 — "지적하지 말라" 류는 diff 를 다 읽은 뒤 마지막에 있어야 덜 묻힌다.
     const completion = await complete({
@@ -103,7 +103,7 @@ export const runReview = async ({
     store.addFindings(record, record.review.findings);
     store.log(
       'info',
-      `${ref.repo}#${ref.number} 리뷰 완료 — 지적 ${record.review.findings.length}건 (${completion.modelUsed})`,
+      record.review.findings.length > 0 ? `${ref.repo}#${ref.number} 리뷰를 마쳤어요. 의견 ${record.review.findings.length}개.` : `${ref.repo}#${ref.number} 리뷰를 마쳤어요. 고칠 것이 없어요.`,
     );
     store.save();
 
@@ -116,7 +116,7 @@ export const runReview = async ({
       record.status = 'failed';
       record.error = errorMessage(error);
       record.finishedAt = new Date().toISOString();
-      store.log('error', `${ref.repo}#${ref.number} 리뷰 실패: ${errorMessage(error).split('\n')[0]}`);
+      store.log('error', `${ref.repo}#${ref.number} 리뷰에 실패했어요: ${errorMessage(error).split('\n')[0]}`);
       store.save();
     }
     throw error;
@@ -157,7 +157,7 @@ export const publishReview = async ({
   const findings = store.findingsOf(record.id);
   const review = { ...record.review, findings };
   let plan = planPublication({ detail: current.detail, diff: current.diff, review, inlineMax });
-  progress(`게시 중… 인라인 ${plan.inlineCount}건 · 본문 목록 ${plan.bodyCount}건`);
+  progress('GitHub 에 리뷰를 올리는 중이에요.');
   let created;
   try {
     created = await createReview(ref, plan.payload);
@@ -189,6 +189,6 @@ export const publishReview = async ({
       store.log('warn', `${ref.repo}#${ref.number} 코멘트 id 조회 실패 — 이번 지적은 학습에서 빠집니다: ${errorMessage(error).split('\n')[0]}`);
     }
   }
-  store.log('info', `${ref.repo}#${ref.number} 게시 완료 — ${created.url}`);
+  store.log('info', `${ref.repo}#${ref.number} 에 리뷰를 올렸어요.`);
   store.save();
 };

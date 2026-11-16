@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import './tool-path.js';
 import { confirm, input, select } from '@inquirer/prompts';
 import { parseArgs, styleText } from 'node:util';
 

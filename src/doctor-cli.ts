@@ -1,3 +1,4 @@
+import './tool-path.js';
 import { CheckLevel, runDoctor } from './doctor.js';
 
 // `pnpm check` — 대시보드 없이 환경만 점검한다.
