@@ -80,3 +80,13 @@ export interface PullRequestDiff {
 }
 
 export class ReviewError extends Error {}
+
+// 모델 CLI 호출 실패. 제한 시간 초과는 다른 AI 로 넘겨도 같이 넘을 가능성이 커서 따로 구분한다.
+export class ModelCallError extends ReviewError {
+  constructor(
+    message: string,
+    readonly kind: 'timeout' | 'failed' = 'failed',
+  ) {
+    super(message);
+  }
+}

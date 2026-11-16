@@ -10,12 +10,20 @@ import { RepoConfig } from './store.js';
 export const RULES_MAX_BYTES = 16_000;
 export const RULES_FILE_MAX_BYTES = 8_000;
 
-const REVIEW_SECTION_HEADING = /^(#{1,3})\s*(code\s*review(\s*rules)?|review\s*rules|리뷰\s*(규칙|규약|지침|가이드))\s*$/im;
+// 리뷰용 섹션을 앞에서부터 차례로 찾는다. "제목에 review·리뷰가 들어가면" 으로 넓게 잡으면
+// `## 7. commit / 리뷰 워크플로우`(커밋 정책) 같은 절이 `## Code Review Rules` 보다 먼저 잡힌다(2026-11-16 실측).
+// 1) 리뷰 기준임이 분명한 제목 — Code Review Rules, Review Focus, Review Guidelines, 리뷰 규칙·기준·지침 등.
+// 2) 제목이 review·리뷰로 시작하는 절(앞 번호 허용).
+// `## Code Review Rules` 는 GitHub 의 Codex 자동 리뷰도 찾는 제목이라 이 이름을 권한다.
+const REVIEW_HEADINGS: readonly RegExp[] = [
+  /^(#{1,3})[^\S\n]*([^\n]*(?:review[^\S\n]*(?:rules?|focus|guidelines?|checklist|criteria)|리뷰[^\S\n]*(?:규칙|규약|지침|기준|가이드|체크리스트|포인트))[^\n]*)$/im,
+  /^(#{1,3})[^\S\n]*((?:\d+[.)][^\S\n]*)?(?:code[^\S\n]*)?(?:review|리뷰)[^\n]*)$/im,
+];
 
 // 리뷰용 섹션이 있으면 그 헤딩부터 같은 수준 이상의 다음 헤딩 전까지.
 export const extractReviewSection = (markdown: string): string | null => {
-  const match = REVIEW_SECTION_HEADING.exec(markdown);
-  if (match === null) {
+  const match = REVIEW_HEADINGS.map((heading) => heading.exec(markdown)).find((found) => found !== null);
+  if (match === undefined || match === null) {
     return null;
   }
   const level = match[1].length;

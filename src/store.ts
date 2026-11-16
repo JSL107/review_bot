@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+import { isSameOpinion } from './dedupe.js';
 import { ModelProvider } from './model.js';
 import { PullRequestReview, ReviewFinding } from './review.type.js';
 
@@ -30,6 +31,8 @@ export interface RepoConfig {
 
 export interface AppConfig {
   provider: ModelProvider;
+  // 고른 AI 가 실패하면 다른 AI 로 한 번 더 리뷰한다(제한 시간 초과는 제외).
+  fallback: boolean;
   // 비우면 provider 기본값.
   modelName: string;
   sweepIntervalMin: number;
@@ -62,6 +65,10 @@ export interface ReviewRecord {
   testsAttached?: number;
   learnedCategories?: string[];
   published?: { at: string; url: string; reviewId: number };
+  // 새 의견이 없어 올리지 않았다(같은 PR 에 이미 올린 리뷰가 있을 때).
+  nothingNew?: boolean;
+  // 고른 AI 가 실패해 다른 AI 로 리뷰했다면 처음 고른 AI.
+  fallbackFrom?: ModelProvider;
 }
 
 export type FindingStatus =
@@ -70,7 +77,8 @@ export type FindingStatus =
   | 'ACCEPTED' // 👍
   | 'REJECTED' // 👎 또는 페이지에서 기각
   | 'NEEDS_JUDGE' // 답글만 있음 — 페이지에서 사람이 판정
-  | 'STALE'; // 반응 없이 PR 이 닫힘
+  | 'STALE' // 반응 없이 PR 이 닫힘
+  | 'DUPLICATE'; // 같은 PR 에 이미 올렸거나 판정된 의견과 같다 — 올리지 않는다
 
 export interface FindingRecord extends ReviewFinding {
   id: string;
@@ -79,6 +87,8 @@ export interface FindingRecord extends ReviewFinding {
   number: number;
   commentId?: number;
   commentUrl?: string;
+  // GitHub 에 올렸는가(줄 코멘트든 요약 목록이든). 중복 판단의 기준이 된다.
+  posted?: boolean;
   status: FindingStatus;
   // 학습 재료. owner(나) 가 쓴 답글만 담는다 — PR 작성자 답글이 규약으로 굳지 않게.
   rejectReason?: string;
@@ -124,6 +134,7 @@ export const defaultRepoConfig = (repo: string): RepoConfig => ({
 
 export const defaultConfig = (): AppConfig => ({
   provider: 'codex',
+  fallback: true,
   modelName: '',
   sweepIntervalMin: 10,
   harvestIntervalMin: 30,
@@ -266,6 +277,39 @@ export class Store {
 
   reviewById(id: string): ReviewRecord | undefined {
     return this.state.reviews.find((review) => review.id === id);
+  }
+
+  // 같은 PR 에 이미 올렸거나 사람이 판정한 의견과 겹치는 의견을 DUPLICATE 로 표시한다. 표시한 수를 돌려준다.
+  markDuplicates(record: ReviewRecord): number {
+    const said = this.state.findings.filter(
+      (finding) =>
+        finding.reviewId !== record.id &&
+        finding.repo.toLowerCase() === record.repo.toLowerCase() &&
+        finding.number === record.number &&
+        (finding.posted === true ||
+          finding.commentId !== undefined ||
+          finding.status === 'ACCEPTED' ||
+          finding.status === 'REJECTED'),
+    );
+    let marked = 0;
+    for (const finding of this.findingsOf(record.id)) {
+      if (finding.status === 'NOT_POSTED' && said.some((previous) => isSameOpinion(finding, previous))) {
+        finding.status = 'DUPLICATE';
+        marked += 1;
+      }
+    }
+    return marked;
+  }
+
+  // 같은 PR 에 이미 올린 다른 리뷰가 있는가.
+  hasPublishedReview(record: ReviewRecord): boolean {
+    return this.state.reviews.some(
+      (review) =>
+        review.id !== record.id &&
+        review.repo.toLowerCase() === record.repo.toLowerCase() &&
+        review.number === record.number &&
+        review.published !== undefined,
+    );
   }
 
   findingsOf(reviewId: string): FindingRecord[] {

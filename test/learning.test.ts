@@ -141,6 +141,9 @@ describe('레포 규칙', () => {
     const md = '# A\n빌드 명령\n## Code Review Rules\n- 규칙 1\n### 세부\n- 규칙 2\n## 다른 절\n무관';
     assert.equal(extractReviewSection(md), '## Code Review Rules\n- 규칙 1\n### 세부\n- 규칙 2');
     assert.equal(extractReviewSection('# 없음'), null);
+    assert.equal(extractReviewSection('# AGENTS.md\n## Stack\nNest\n## Review Focus\n- 권한 검사 누락을 본다\n## Safety\n무관'), '## Review Focus\n- 권한 검사 누락을 본다');
+    // 제목에 리뷰가 들어갔을 뿐인 절보다 리뷰 기준 절이 이긴다 (personal_agents AGENTS.md 실측)
+    assert.equal(extractReviewSection('## 7. commit / 리뷰 워크플로우\n커밋 규칙\n## Code Review Rules\n- 한국어로'), '## Code Review Rules\n- 한국어로');
   });
   it('설정 규약을 앞에, 실린 출처를 돌려준다', () => {
     const rules = renderRepoRules([{ path: 'AGENTS.md', content: '규칙' }], '손 규약');

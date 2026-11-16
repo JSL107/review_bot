@@ -312,7 +312,10 @@ const SEVERITY = { MUST_FIX: '꼭 고칠 것', MISSING_TEST: '테스트가 빠�
 // 게시 순서(publish.ts sortBySeverity)와 같게 — sort 는 안정 정렬이라 같은 심각도는 모델 순서를 지킨다.
 const SEVERITY_ORDER = { MUST_FIX: 0, MISSING_TEST: 1, NICE_TO_HAVE: 2 };
 const CATEGORY = { CORRECTNESS: '동작 오류', SECURITY: '보안', RELIABILITY: '장애 대비', TEST: '테스트', ARCHITECTURE: '구조', READABILITY: '읽기 쉬움', STYLE: '코드 모양', UNCLASSIFIED: '기타' };
-const SAID = { NOT_POSTED: '아직 안 올림', OPEN: '반응 기다리는 중', ACCEPTED: '맞다고 함', REJECTED: '틀렸다고 함', NEEDS_JUDGE: '확인 필요', STALE: '반응 없이 끝남' };
+const SAID = { NOT_POSTED: '아직 안 올림', OPEN: '반응 기다리는 중', ACCEPTED: '맞다고 함', REJECTED: '틀렸다고 함', NEEDS_JUDGE: '확인 필요', STALE: '반응 없이 끝남', DUPLICATE: '이미 올린 의견' };
+// 요약 목록으로 올린 의견은 줄 코멘트가 없어 반응을 걷지 못한다 — 상태 대신 그 사실을 보여 준다.
+const saidOf = (finding) => (finding.posted && finding.commentId === undefined && finding.status === 'NOT_POSTED' ? '요약에 올림' : SAID[finding.status] ?? '');
+const newFindings = (review) => review.findings.filter((f) => f.status !== 'DUPLICATE');
 const VERDICT = { request_changes: '꼭 고칠 것이 있어요', comment: '고치면 좋은 것이 있어요', approve: '문제를 찾지 못했어요', undetermined: '판단하기 어려웠어요' };
 const TRIGGER = { sweep: '자동으로', manual: '직접', cli: '터미널에서' };
 const TARGET = { all: '열린 PR 전부', 'review-requested': '나에게 리뷰를 부탁한 PR 만', mine: '내가 올린 PR 만' };
@@ -426,8 +429,8 @@ const latestReviews = () => {
     return true;
   });
 };
-const needsAction = (review) => review.status === 'failed' || (review.status === 'done' && !review.published && review.findings.length > 0);
-const mustCount = (review) => review.findings.filter((f) => f.severity === 'MUST_FIX').length;
+const needsAction = (review) => review.status === 'failed' || (review.status === 'done' && !review.published && !review.nothingNew && newFindings(review).length > 0);
+const mustCount = (review) => newFindings(review).filter((f) => f.severity === 'MUST_FIX').length;
 const todoReviews = () => latestReviews().filter(needsAction).sort((a, b) => (a.status === 'failed' ? 0 : 1) - (b.status === 'failed' ? 0 : 1) || mustCount(b) - mustCount(a));
 const todoTotal = () => todoReviews().length + state.judgeQueue.length;
 
@@ -528,7 +531,7 @@ const renderTodo = () => {
     } else {
       const must = mustCount(review);
       rows.push(todoRow('', '올리기 전', title,
-        `의견 ${review.findings.length}개${must ? `, 그중 꼭 고칠 것 ${must}개` : ''}. ${ago(review.finishedAt || review.createdAt)} 리뷰했어요.`,
+        `새 의견 ${newFindings(review).length}개${must ? `, 그중 꼭 고칠 것 ${must}개` : ''}. ${ago(review.finishedAt || review.createdAt)} 리뷰했어요.`,
         `<button class="btn" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>`));
     }
   }
@@ -621,7 +624,7 @@ const renderOpinion = (finding) => `
       <span class="sev ${esc(finding.severity)}">${SEVERITY[finding.severity] ?? '의견'}</span>
       <span class="muted small">${esc(CATEGORY[finding.category] ?? '기타')}</span>
       ${finding.file ? `<span class="where">${esc(finding.file)}${finding.line ? ` ${Number(finding.line)}번째 줄` : ''}</span>` : ''}
-      <span class="said ${esc(finding.status)}">${finding.commentUrl ? `<a href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">${SAID[finding.status] ?? ''}</a>` : (SAID[finding.status] ?? '')}</span>
+      <span class="said ${esc(finding.status)}">${finding.commentUrl ? `<a href="${safeUrl(finding.commentUrl)}" target="_blank" rel="noopener">${saidOf(finding)}</a>` : saidOf(finding)}</span>
     </div>
     <p>${esc(finding.body)}</p>
   </div>`;
@@ -631,7 +634,7 @@ const renderReview = (review) => {
   const head = review.status === 'running' ? '<span class="rverdict muted">리뷰하는 중</span>'
     : review.status === 'failed' ? '<span class="rverdict high">리뷰 실패</span>'
     : `<span class="rverdict ${r.approvalRecommendation === 'request_changes' ? 'high' : ''}">${VERDICT[r.approvalRecommendation] ?? ''}</span>`;
-  const when = `${TRIGGER[review.trigger] ?? ''} ${ago(review.createdAt)} 리뷰${duration(review) ? `, ${duration(review)} 걸림` : ''}${review.published ? ', GitHub 에 올림' : ''}`;
+  const when = `${TRIGGER[review.trigger] ?? ''} ${ago(review.createdAt)} 리뷰${duration(review) ? `, ${duration(review)} 걸림` : ''}${review.published ? ', GitHub 에 올림' : review.nothingNew ? ', 새 의견이 없어 올리지 않음' : ''}`;
   let body = '';
   if (review.status === 'failed') {
     body = `<p>${esc(explainError(review.error))}</p>
@@ -641,9 +644,9 @@ const renderReview = (review) => {
     const sorted = [...review.findings].sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
     const publish = review.published
       ? `<a class="btn" href="${safeUrl(review.published.url)}" target="_blank" rel="noopener">GitHub 에서 보기</a>`
-      : review.findings.length ? `<button class="btn main" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>` : '';
+      : review.nothingNew ? '' : newFindings(review).length ? `<button class="btn main" data-action="preview" data-id="${esc(review.id)}">확인하고 올리기</button>` : '';
     const tech = [
-      review.modelUsed ? `<dt>리뷰한 AI</dt><dd>${esc(review.modelUsed)}</dd>` : '',
+      review.modelUsed ? `<dt>리뷰한 AI</dt><dd>${esc(review.modelUsed)}${review.fallbackFrom ? ` (${review.fallbackFrom === 'codex' ? 'ChatGPT' : 'Claude'} 가 실패해서 대신 리뷰했어요)` : ''}</dd>` : '',
       review.testsAttached ? `<dt>함께 읽은 기존 테스트</dt><dd>${Number(review.testsAttached)}개</dd>` : '',
       review.rulesUsed?.length ? `<dt>함께 읽은 저장소 규칙</dt><dd>${esc(review.rulesUsed.join(', '))}</dd>` : '',
       review.learnedCategories?.length ? `<dt>기억하고 있던 것</dt><dd>${esc(review.learnedCategories.map((c) => CATEGORY[c] ?? c).join(', '))}</dd>` : '',
@@ -836,6 +839,7 @@ const renderSettings = () => {
       </section>
       <section class="set-section">
         <details><summary>고급 설정</summary><div class="adv-grid">
+          <label class="check" style="grid-column:1/-1"><input type="checkbox" name="fallback" ${c.fallback ? 'checked' : ''}><span>고른 AI 가 실패하면 다른 AI 로 다시 리뷰하기<span class="hint">로그인이 풀렸거나 사용량을 다 썼을 때 다른 AI 로 넘어가요. 답을 기다리다 시간이 넘은 경우는 넘기지 않아요.</span></span></label>
           <label>AI 모델 이름 (비우면 기본값)<input type="text" name="modelName" value="${esc(c.modelName)}"></label>
           <label>새 PR 확인 간격 (분)<input type="number" name="sweepIntervalMin" min="1" max="1440" value="${Number(c.sweepIntervalMin)}"></label>
           <label>반응 확인 간격 (분)<input type="number" name="harvestIntervalMin" min="1" max="1440" value="${Number(c.harvestIntervalMin)}"></label>
@@ -877,6 +881,7 @@ const collectSettings = () => {
   const data = new FormData(form);
   settingsDraft.provider = data.get('provider') ?? settingsDraft.provider;
   settingsDraft.modelName = data.get('modelName');
+  settingsDraft.fallback = data.get('fallback') === 'on';
   // 빈 칸을 Number('') === 0 으로 받으면 "0 으로 바꿈" 이 된다. 빈 칸은 NaN 으로 두어 서버가 거절하게 한다.
   for (const key of ['sweepIntervalMin', 'harvestIntervalMin', 'inlineMax', 'timeoutSec']) settingsDraft[key] = String(data.get(key) ?? '').trim() === '' ? NaN : Number(data.get(key));
   form.querySelectorAll('.repo-card').forEach((card) => {
@@ -900,7 +905,7 @@ const changedRepos = () => {
 };
 const settingsChangeCount = () => {
   if (!settingsDraft || !settingsBase) return 0;
-  const globals = ['provider', 'modelName', 'sweepIntervalMin', 'harvestIntervalMin', 'inlineMax', 'timeoutSec'].filter((key) => settingsDraft[key] !== settingsBase[key]).length;
+  const globals = ['provider', 'fallback', 'modelName', 'sweepIntervalMin', 'harvestIntervalMin', 'inlineMax', 'timeoutSec'].filter((key) => settingsDraft[key] !== settingsBase[key]).length;
   const removed = settingsBase.repos.filter((old) => !settingsDraft.repos.some((repo) => repo.repo === old.repo)).length;
   return globals + removed + changedRepos().size;
 };
@@ -943,11 +948,13 @@ const openPreview = async (id) => {
     const p = await api('GET', `/api/reviews/${id}/preview`);
     bodyEl.innerHTML = `
       ${p.stale ? '<div class="notice bad"><p>리뷰한 뒤에 PR 이 또 바뀌어서 이대로는 올릴 수 없어요. "다시 리뷰" 를 눌러 새 내용으로 리뷰해 주세요.</p></div>' : ''}
+      ${p.nothingNew ? '<div class="notice"><p>이 PR 에 이미 올린 의견과 모두 같아서 새로 올릴 것이 없어요.</p></div>' : ''}
+      ${!p.nothingNew && p.duplicateCount ? `<p class="muted">이 PR 에 이미 올린 것과 같은 의견 ${Number(p.duplicateCount)}개는 빼고 올려요.</p>` : ''}
       <h3>PR 에 남길 요약</h3><div class="preview-body">${esc(p.body)}</div>
       <h3>코드 줄마다 남길 의견 ${p.comments.length}개</h3>
       ${p.comments.length ? p.comments.map((c) => `<div class="preview-comment"><span class="where">${esc(c.path)} ${Number(c.line)}번째 줄</span><p>${esc(c.body)}</p></div>`).join('') : '<p class="muted">줄에 붙일 수 있는 의견이 없어서 모두 요약에 넣었어요.</p>'}
       ${p.droppedCount ? `<p class="muted">덜 중요한 의견 ${Number(p.droppedCount)}개는 올리지 않아요. 몇 개까지 올릴지는 설정의 고급 설정에서 바꿀 수 있어요.</p>` : ''}`;
-    publishBtn.disabled = p.stale;
+    publishBtn.disabled = p.stale || p.nothingNew;
   } catch (error) {
     bodyEl.innerHTML = `<p class="error-text">${esc(error.message)}</p>`;
   }

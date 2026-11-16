@@ -4,7 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { readCodexConfigModel } from './doctor.js';
-import { ReviewError } from './review.type.js';
+import { ModelCallError, ReviewError } from './review.type.js';
 
 // 이대리 src/model-router/infrastructure/{codex,claude}-cli.provider.ts · cli-process.util.ts 에서
 // 리뷰에 필요한 만큼만 옮겼다. 폴백은 없다 — 사용자가 고른 모델 하나로만 돈다.
@@ -180,19 +180,19 @@ const spawnWithStdin = ({
     });
     child.on('error', (error) => {
       clearTimeout(timer);
-      reject(new ReviewError(`${command} 실행 실패: ${error.message}`));
+      reject(new ModelCallError(`${command} 실행 실패: ${error.message}`, 'failed'));
     });
     child.on('close', (code) => {
       clearTimeout(timer);
       if (timedOut) {
         reject(
-          new ReviewError(`${command} 가 ${Math.round(timeoutMs / 1000)}초 안에 끝나지 않았습니다.`),
+          new ModelCallError(`${command} 가 ${Math.round(timeoutMs / 1000)}초 안에 끝나지 않았습니다.`, 'timeout'),
         );
         return;
       }
       if (code !== 0) {
         reject(
-          new ReviewError(
+          new ModelCallError(
             `${command} exit=${code}: ${stderr.trim().slice(-800) || '(stderr 없음 — 인증 만료나 쿼터 소진을 의심)'}`,
           ),
         );
@@ -226,7 +226,7 @@ const runCodex = async ({
     });
     const text = await readFile(outputFile, 'utf-8').catch(() => '');
     if (text.trim().length === 0) {
-      throw new ReviewError(
+      throw new ModelCallError(
         'codex 가 빈 응답으로 끝났습니다 — 인증 만료나 쿼터 소진을 의심하세요 (`codex login`).',
       );
     }
@@ -270,10 +270,10 @@ const runClaude = async ({
     try {
       parsed = JSON.parse(stdout) as ClaudeJsonOutput;
     } catch {
-      throw new ReviewError(`claude 출력을 읽지 못했습니다: ${stdout.slice(0, 300)}`);
+      throw new ModelCallError(`claude 출력을 읽지 못했습니다: ${stdout.slice(0, 300)}`);
     }
     if (parsed.is_error === true || typeof parsed.result !== 'string') {
-      throw new ReviewError(`claude 오류 응답: ${String(parsed.result ?? stdout.slice(0, 300))}`);
+      throw new ModelCallError(`claude 오류 응답: ${String(parsed.result ?? stdout.slice(0, 300))}`);
     }
     return parsed.result;
   } finally {
